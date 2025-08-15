@@ -1,10 +1,10 @@
 
-# Photo Metadata Suite
+# Zeitkalkül App (Prototype) 08/25
 
 **Erweiterte Foto-Metadaten-Analyse** mit Gesichtserkennung, EXIF-Extraktion und intelligenten Analysen.  
 Enthält eine **CLI** und eine **Streamlit Multi-Page UI** (Enroll + Annotate + Analyze).
 
-## 🆕 Neue Features
+## Neue Features
 
 ### Erweiterte Metadaten-Extraktion
 - **Vollständige EXIF-Daten**: Kamera-Modell, Objektiv, Aufnahme-Einstellungen
