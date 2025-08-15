@@ -1,0 +1,31 @@
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photo-metadata-suite"
+version = "0.1.0"
+description = "Detect faces, age/gender, and EXIF GPS from photos. CLI + Streamlit UI."
+readme = "README.md"
+authors = [{ name = "Your Name" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "streamlit>=1.36.0",
+    "insightface>=0.7.3",
+    "onnxruntime>=1.18.0",
+    "opencv-python>=4.9.0.80",
+    "numpy>=1.26.4",
+    "Pillow>=10.3.0",
+    "scikit-learn>=1.4.2",
+    "tqdm>=4.66.4",
+    "geopy>=2.4.1",
+    "piexif>=1.1.3",
+]
+
+[project.scripts]
+photo-meta = "app.main:main"
+
+[tool.setuptools]
+packages = ["app"]

@@ -1,0 +1,96 @@
+[
+  {
+    "image": "beispiel_foto_1.jpg",
+    "metadata": {
+      "camera_make": "Canon",
+      "camera_model": "EOS R5",
+      "lens": "RF 24-70mm f/2.8L IS USM",
+      "datetime": "2024-01-15T14:30:00",
+      "focal_length": 50,
+      "f_number": 2.8,
+      "iso": 100,
+      "exposure_time": 125,
+      "image_width": 8192,
+      "image_height": 5464,
+      "gps": {
+        "lat": 52.520008,
+        "lon": 13.404954,
+        "altitude": 34.5,
+        "timestamp": "2024-01-15 14:30:00"
+      }
+    },
+    "persons": [
+      {
+        "bbox": [100, 150, 300, 450],
+        "prob": 0.95,
+        "name": "Max Mustermann",
+        "similarity": 0.87,
+        "age": 30,
+        "gender": "male",
+        "quality_score": 0.85,
+        "emotion": "happy",
+        "eye_status": "open",
+        "mouth_status": "open"
+      }
+    ],
+    "location": {
+      "full_address": "Unter den Linden 1, 10117 Berlin, Deutschland",
+      "country": "Deutschland",
+      "state": "Berlin",
+      "city": "Berlin"
+    }
+  },
+  {
+    "image": "beispiel_foto_2.jpg",
+    "metadata": {
+      "camera_make": "Sony",
+      "camera_model": "ILCE-7M4",
+      "lens": "FE 24-70mm f/2.8 GM",
+      "datetime": "2024-01-16T10:15:00",
+      "focal_length": 35,
+      "f_number": 4.0,
+      "iso": 200,
+      "exposure_time": 60,
+      "image_width": 7008,
+      "image_height": 4672,
+      "gps": {
+        "lat": 48.135125,
+        "lon": 11.581981,
+        "altitude": 519.0,
+        "timestamp": "2024-01-16 10:15:00"
+      }
+    },
+    "persons": [
+      {
+        "bbox": [200, 100, 400, 350],
+        "prob": 0.92,
+        "name": "Anna Schmidt",
+        "similarity": 0.91,
+        "age": 28,
+        "gender": "female",
+        "quality_score": 0.78,
+        "emotion": "neutral",
+        "eye_status": "open",
+        "mouth_status": "closed"
+      },
+      {
+        "bbox": [500, 120, 650, 320],
+        "prob": 0.88,
+        "name": null,
+        "similarity": null,
+        "age": 45,
+        "gender": "male",
+        "quality_score": 0.65,
+        "emotion": "unknown",
+        "eye_status": "partially_open",
+        "mouth_status": "closed"
+      }
+    ],
+    "location": {
+      "full_address": "Marienplatz 1, 80331 München, Deutschland",
+      "country": "Deutschland",
+      "state": "Bayern",
+      "city": "München"
+    }
+  }
+]
