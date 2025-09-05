@@ -1,10 +1,10 @@
-# 🎯 Metadaten-basiertes KI-Training
+# Metadaten-basiertes KI-Training
 
 ## Übersicht
 
 Das erweiterte Training-System verbessert die Gesichtserkennung durch Integration von Metadaten wie Standort, Zeit, Kamera-Einstellungen und technischen Parametern.
 
-## 🚀 Schnellstart
+## Schnellstart
 
 ### 1. Trainingsdaten vorbereiten
 
@@ -61,7 +61,7 @@ python train_enhanced_model.py \
   --technical-weight 0.1
 ```
 
-## 📊 Metadaten-Integration
+## Metadaten-Integration
 
 ### Demografische Metadaten
 - **Alter**: Normalisiert auf 0-1 Skala
@@ -86,7 +86,7 @@ python train_enhanced_model.py \
 - **ISO**: Normalisiert auf 6400
 - **Blende**: Normalisiert auf f/22
 
-## 🧠 Trainings-Algorithmus
+## Trainings-Algorithmus
 
 ### 1. Metadaten-Encoding
 ```python
@@ -130,7 +130,7 @@ def _enhance_with_metadata(base_prediction, metadata, metadata_features):
     return enhanced
 ```
 
-## 📈 Erwartete Verbesserungen
+## Erwartete Verbesserungen
 
 | Metrik | Verbesserung | Begründung |
 |--------|-------------|------------|
@@ -140,7 +140,7 @@ def _enhance_with_metadata(base_prediction, metadata, metadata_features):
 | **Temporale Konsistenz** | +25-35% | Zeitliche Muster-Erkennung |
 | **Gesamtqualität** | +15-25% | Technische Metadaten-Integration |
 
-## 🔧 Konfiguration
+## Konfiguration
 
 ### Metadaten-Gewichtungen
 ```python
@@ -159,7 +159,7 @@ metadata_weights = {
 - **Feature-Normalisierung**: Min-Max Scaling
 - **Bias-Schwellenwerte**: 5+ Beispiele pro Kategorie
 
-## 📁 Dateistruktur
+## Dateistruktur
 
 ```
 models/
@@ -173,7 +173,7 @@ training_data/
 └── validation_data.json       # Validierungsdaten
 ```
 
-## 🧪 Modell-Testing
+## Modell-Testing
 
 ### 1. UI-Testing
 - Gehen Sie zur **Train-Seite**
@@ -198,7 +198,7 @@ metadata = {
 predictions = engine.predict_with_metadata(image, metadata)
 ```
 
-## 🔄 Kontinuierliches Lernen
+## Kontinuierliches Lernen
 
 ### Feedback-Sammlung
 ```python
@@ -220,7 +220,7 @@ class ContinuousLearning:
 - **Update-Frequenz**: Wöchentlich
 - **A/B-Testing**: Kontinuierliche Validierung
 
-## 📊 Monitoring
+## Monitoring
 
 ### Trainings-Metriken
 - **Accuracy**: Klassifikations-Genauigkeit
@@ -233,7 +233,7 @@ class ContinuousLearning:
 - **Zeit-Bias**: Geschlechtsverteilung pro Stunde
 - **Technischer-Bias**: Qualität vs. Kamera-Modell
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Häufige Probleme
 
@@ -255,7 +255,7 @@ class ContinuousLearning:
 python train_enhanced_model.py --input data.json --verbose
 ```
 
-## 📚 Weiterführende Informationen
+## Weiterführende Informationen
 
 - [Trainingsplan](training_plan.md) - Detaillierter Implementierungsplan
 - [API-Dokumentation](API.md) - Technische API-Referenz

@@ -14,12 +14,12 @@ from app.utils import (
     calculate_distance_between_points
 )
 
-st.title("📊 Erweiterte Metadaten-Analyse")
+st.title("Erweiterte Metadaten-Analyse")
 st.caption("Analysieren Sie Ihre Foto-Metadaten mit Statistiken und Visualisierungen")
 
 # Sidebar für Einstellungen
 with st.sidebar:
-    st.header("⚙️ Analyse-Einstellungen")
+    st.header("Analyse-Einstellungen")
     
     # Gruppierungseinstellungen
     st.subheader("Gruppierung")
@@ -116,7 +116,7 @@ def create_metadata_summary(data):
 
 def display_summary_cards(summary):
     """Zeigt Zusammenfassungskarten an"""
-    st.subheader("📈 Übersicht")
+    st.subheader("Übersicht")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -144,7 +144,7 @@ def display_summary_cards(summary):
 
 def create_face_analysis_charts(data):
     """Erstellt Charts für Gesichtsanalyse"""
-    st.subheader("👥 Gesichtsanalyse")
+    st.subheader("Gesichtsanalyse")
     
     # Daten sammeln
     face_data = []
@@ -206,7 +206,7 @@ def create_face_analysis_charts(data):
 
 def create_camera_analysis_charts(data):
     """Erstellt Charts für Kamera-Analyse"""
-    st.subheader("📷 Kamera-Analyse")
+    st.subheader("Kamera-Analyse")
     
     # Kamera-Daten sammeln
     camera_data = []
@@ -272,7 +272,7 @@ def create_camera_analysis_charts(data):
 
 def create_temporal_analysis_charts(data):
     """Erstellt Charts für zeitliche Analyse"""
-    st.subheader("🕒 Zeitliche Analyse")
+    st.subheader("Zeitliche Analyse")
     
     # Zeitdaten sammeln
     time_data = []
@@ -333,7 +333,7 @@ def create_temporal_analysis_charts(data):
 
 def create_location_analysis_charts(data):
     """Erstellt Charts für Standort-Analyse"""
-    st.subheader("📍 Standort-Analyse")
+    st.subheader("Standort-Analyse")
     
     # GPS-Daten sammeln
     location_data = []
@@ -385,7 +385,7 @@ def create_location_analysis_charts(data):
 
 def display_grouping_analysis(data):
     """Zeigt Gruppierungsanalyse an"""
-    st.subheader("📂 Gruppierungsanalyse")
+    st.subheader("Gruppierungsanalyse")
     
     # Standort-Gruppierung
     location_groups = group_images_by_location(data, location_threshold)
@@ -395,7 +395,7 @@ def display_grouping_analysis(data):
     with col1:
         st.write(f"**Standort-Gruppen:** {len(location_groups)}")
         for group_id, group_images in location_groups.items():
-            with st.expander(f"📍 {group_id} ({len(group_images)} Bilder)", expanded=False):
+            with st.expander(f"{group_id} ({len(group_images)} Bilder)", expanded=False):
                 for img in group_images[:5]:  # Zeige nur erste 5
                     st.write(f"- {img.get('image', 'Unknown')}")
                 if len(group_images) > 5:
@@ -407,7 +407,7 @@ def display_grouping_analysis(data):
     with col2:
         st.write(f"**Zeit-Gruppen:** {len(time_groups)}")
         for group_id, group_images in time_groups.items():
-            with st.expander(f"🕒 {group_id} ({len(group_images)} Bilder)", expanded=False):
+            with st.expander(f"{group_id} ({len(group_images)} Bilder)", expanded=False):
                 for img in group_images[:5]:  # Zeige nur erste 5
                     st.write(f"- {img.get('image', 'Unknown')}")
                 if len(group_images) > 5:
@@ -431,7 +431,7 @@ if results_file is not None:
             display_summary_cards(summary)
             
             # Tabs für verschiedene Analysen
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["👥 Gesichter", "📷 Kamera", "🕒 Zeit", "📍 Standort", "📂 Gruppierung"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Gesichter", "Kamera", "Zeit", "Standort", "Gruppierung"])
             
             with tab1:
                 create_face_analysis_charts(filtered_data)
@@ -449,7 +449,7 @@ if results_file is not None:
                 display_grouping_analysis(filtered_data)
             
             # Download der analysierten Daten
-            st.subheader("💾 Export")
+            st.subheader("Export")
             analysis_results = {
                 'summary': summary,
                 'location_groups': group_images_by_location(filtered_data, location_threshold),
@@ -458,7 +458,7 @@ if results_file is not None:
             }
             
             st.download_button(
-                "⬇️ Download Analyse-Ergebnisse",
+                "Download Analyse-Ergebnisse",
                 data=json.dumps(analysis_results, ensure_ascii=False, indent=2, default=str),
                 file_name="analysis_results.json",
                 mime="application/json"
@@ -468,39 +468,39 @@ if results_file is not None:
         st.error(f"Fehler beim Laden der JSON-Datei: {e}")
 
 else:
-    st.info("📁 Laden Sie eine JSON-Datei mit Analyseergebnissen hoch, um zu starten.")
+    st.info("Laden Sie eine JSON-Datei mit Analyseergebnissen hoch, um zu starten.")
     
     # Beispiel-Daten anzeigen
-    with st.expander("ℹ️ Über diese Analyse", expanded=False):
+    with st.expander("Über diese Analyse", expanded=False):
         st.markdown("""
         **Diese Analyse-Seite bietet:**
         
-        📊 **Übersicht:**
+        **Übersicht:**
         - Gesamtstatistiken Ihrer Fotos
         - Qualitätsbewertungen
         - Personen-Erkennung
         
-        👥 **Gesichtsanalyse:**
+        **Gesichtsanalyse:**
         - Alters- und Geschlechtsverteilung
         - Qualitätsverteilung
         - Emotionsanalyse
         
-        📷 **Kamera-Analyse:**
+        **Kamera-Analyse:**
         - Verwendung verschiedener Kameras
         - Brennweiten-Verteilung
         - Aufnahme-Einstellungen
         
-        🕒 **Zeitliche Analyse:**
+        **Zeitliche Analyse:**
         - Aufnahmen pro Tag/Stunde
         - Wochentags- und Monatsverteilung
         - Zeitliche Trends
         
-        📍 **Standort-Analyse:**
+        **Standort-Analyse:**
         - Interaktive Karte
         - Höhenverteilung
         - Geografische Muster
         
-        📂 **Gruppierung:**
+        **Gruppierung:**
         - Automatische Gruppierung nach Standort
         - Zeitliche Gruppierung
         - Ähnlichkeitsanalyse

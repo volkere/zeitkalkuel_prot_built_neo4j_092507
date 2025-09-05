@@ -82,11 +82,11 @@ def main():
     
     # Validierung
     if not os.path.exists(args.input):
-        print(f"❌ Eingabe-Pfad existiert nicht: {args.input}")
+        print(f"Eingabe-Pfad existiert nicht: {args.input}")
         sys.exit(1)
     
     if not (0.1 <= args.validation_split <= 0.5):
-        print("❌ Validierungs-Split muss zwischen 0.1 und 0.5 liegen")
+        print("Validierungs-Split muss zwischen 0.1 und 0.5 liegen")
         sys.exit(1)
     
     # Ausgabe-Verzeichnis erstellen
@@ -94,20 +94,20 @@ def main():
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     
-    print("🚀 Starte Training der erweiterten Gesichtserkennung...")
-    print(f"📁 Eingabe: {args.input}")
-    print(f"💾 Ausgabe: {args.output}")
-    print(f"📊 Validierungs-Split: {args.validation_split}")
+    print("Starte Training der erweiterten Gesichtserkennung...")
+    print(f"Eingabe: {args.input}")
+    print(f"Ausgabe: {args.output}")
+    print(f"Validierungs-Split: {args.validation_split}")
     
     try:
         # Trainingsdaten laden
         training_data = load_training_data(args.input)
         
         if not training_data:
-            print("❌ Keine Trainingsdaten gefunden!")
+            print("Keine Trainingsdaten gefunden!")
             sys.exit(1)
         
-        print(f"✅ {len(training_data)} Trainingsbeispiele geladen")
+        print(f"{len(training_data)} Trainingsbeispiele geladen")
         
         # Metadaten-Gewichtungen
         metadata_weights = {
@@ -119,7 +119,7 @@ def main():
         }
         
         if args.verbose:
-            print("📊 Metadaten-Gewichtungen:")
+            print("Metadaten-Gewichtungen:")
             for key, value in metadata_weights.items():
                 print(f"  {key}: {value}")
         
@@ -131,32 +131,32 @@ def main():
         
         # Ergebnisse ausgeben
         print("\n" + "="*50)
-        print("🎉 TRAINING ERFOLGREICH ABGESCHLOSSEN!")
+        print("TRAINING ERFOLGREICH ABGESCHLOSSEN!")
         print("="*50)
         
         if 'training' in results:
-            print("\n📊 Training-Metriken:")
+            print("\nTraining-Metriken:")
             for metric, value in results['training'].items():
                 print(f"  {metric}: {value:.3f}")
         
         if 'validation' in results:
-            print("\n✅ Validierungs-Metriken:")
+            print("\nValidierungs-Metriken:")
             for metric, value in results['validation'].items():
                 print(f"  {metric}: {value:.3f}")
         
         if 'improvement' in results:
-            print("\n📈 Verbesserungen:")
+            print("\nVerbesserungen:")
             for metric, improvement in results['improvement'].items():
                 print(f"  {metric}: {improvement:+.3f}")
         
-        print(f"\n💾 Modell gespeichert: {args.output}")
+        print(f"\nModell gespeichert: {args.output}")
         print("="*50)
         
         # Modell-Info-Datei erstellen
         create_model_info(args.output, results, metadata_weights)
         
     except Exception as e:
-        print(f"❌ Fehler beim Training: {e}")
+        print(f"Fehler beim Training: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()
@@ -176,7 +176,7 @@ def load_training_data(input_path: str) -> List[Dict]:
                 else:
                     training_data.append(data)
         except Exception as e:
-            print(f"⚠️ Fehler beim Laden von {input_path}: {e}")
+            print(f"Fehler beim Laden von {input_path}: {e}")
     
     elif os.path.isdir(input_path):
         # Verzeichnis - suche nach JSON-Dateien
@@ -192,7 +192,7 @@ def load_training_data(input_path: str) -> List[Dict]:
                     else:
                         training_data.append(data)
             except Exception as e:
-                print(f"⚠️ Fehler beim Laden von {json_file}: {e}")
+                print(f"Fehler beim Laden von {json_file}: {e}")
     
     return training_data
 
@@ -212,9 +212,9 @@ def create_model_info(model_path: str, results: Dict, metadata_weights: Dict):
     try:
         with open(info_path, 'w', encoding='utf-8') as f:
             json.dump(info, f, indent=2, ensure_ascii=False)
-        print(f"📄 Modell-Info erstellt: {info_path}")
+        print(f"Modell-Info erstellt: {info_path}")
     except Exception as e:
-        print(f"⚠️ Fehler beim Erstellen der Modell-Info: {e}")
+        print(f"Fehler beim Erstellen der Modell-Info: {e}")
 
 def validate_training_data(training_data: List[Dict]) -> Dict[str, Any]:
     """Validiert Trainingsdaten"""

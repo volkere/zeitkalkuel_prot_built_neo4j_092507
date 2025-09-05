@@ -7,7 +7,7 @@ import cv2
 
 from app.face_recognizer import FaceEngine, GalleryDB
 
-st.title("👤 Enroll: Embeddings erstellen")
+st.title("Enroll: Embeddings erstellen")
 st.caption("Erzeuge eine embeddings.pkl aus einer Galerie-ZIP oder manuell pro Person.")
 
 with st.sidebar:
@@ -17,7 +17,7 @@ if "engine_enroll" not in st.session_state or st.session_state.get("det_enroll")
     st.session_state["engine_enroll"] = FaceEngine(det_size=(det, det))
     st.session_state["det_enroll"] = det
 
-tab_zip, tab_manual = st.tabs(["📦 Galerie-ZIP hochladen", "🧩 Manuell pro Person"])
+tab_zip, tab_manual = st.tabs(["Galerie-ZIP hochladen", "Manuell pro Person"])
 
 with tab_zip:
     st.markdown("**ZIP-Struktur:** `PersonA/*.jpg`, `PersonB/*.png`, …")
@@ -45,7 +45,7 @@ with tab_zip:
             st.success(f"Embeddings erstellt: {len(db.people)} Personen aus {count_imgs} Bildern.")
             b = io.BytesIO()
             pickle.dump(db.people, b, protocol=pickle.HIGHEST_PROTOCOL)
-            st.download_button("⬇️ embeddings.pkl herunterladen", data=b.getvalue(), file_name="embeddings.pkl", mime="application/octet-stream")
+            st.download_button("embeddings.pkl herunterladen", data=b.getvalue(), file_name="embeddings.pkl", mime="application/octet-stream")
 
 with tab_manual:
     st.markdown("Name eingeben, Bilder hochladen, **Hinzufügen** klicken.")
@@ -72,4 +72,4 @@ with tab_manual:
         st.info(f"Aktueller DB-Status: {len(st.session_state['manual_db'].people)} Personen.")
         b = io.BytesIO()
         pickle.dump(st.session_state["manual_db"].people, b, protocol=pickle.HIGHEST_PROTOCOL)
-        st.download_button("⬇️ embeddings.pkl herunterladen", data=b.getvalue(), file_name="embeddings.pkl", mime="application/octet-stream")
+        st.download_button("embeddings.pkl herunterladen", data=b.getvalue(), file_name="embeddings.pkl", mime="application/octet-stream")

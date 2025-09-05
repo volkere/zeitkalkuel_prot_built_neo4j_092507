@@ -9,25 +9,25 @@ import cv2
 from app.face_recognizer import FaceEngine, GalleryDB
 from app.location import extract_exif_gps, reverse_geocode, extract_comprehensive_metadata, get_location_details
 
-st.title("🖼️ Annotate: Fotos analysieren")
+st.title("Annotate: Fotos analysieren")
 st.caption("Erweiterte Gesichtserkennung, Metadaten-Extraktion und Standortanalyse")
 
 # Benutzerführung
-with st.expander("ℹ️ Anleitung", expanded=False):
+with st.expander("Anleitung", expanded=False):
     st.markdown("""
     **So verwenden Sie diese Seite:**
     
-    1. **📁 Bilder hochladen**: Wählen Sie Bilder in der Sidebar aus
-    2. **⚙️ Einstellungen anpassen**: Konfigurieren Sie die Erkennungsparameter
-    3. **🔄 Verarbeitung**: Die App analysiert automatisch alle Bilder
-    4. **⬇️ Download**: Nach der Verarbeitung erscheint ein Download-Button am Ende
-    5. **📊 Analyse**: Laden Sie die JSON-Datei in der 'Analyze'-Seite hoch
+    1. **Bilder hochladen**: Wählen Sie Bilder in der Sidebar aus
+    2. **Einstellungen anpassen**: Konfigurieren Sie die Erkennungsparameter
+    3. **Verarbeitung**: Die App analysiert automatisch alle Bilder
+    4. **Download**: Nach der Verarbeitung erscheint ein Download-Button am Ende
+    5. **Analyse**: Laden Sie die JSON-Datei in der 'Analyze'-Seite hoch
     
-    **💡 Tipp**: Der Download-Button erscheint erst nach der Verarbeitung aller Bilder!
+    **Tipp**: Der Download-Button erscheint erst nach der Verarbeitung aller Bilder!
     """)
 
 with st.sidebar:
-    st.header("⚙️ Einstellungen")
+    st.header("Einstellungen")
     
     # Gesichtserkennung
     st.subheader("Gesichtserkennung")
@@ -110,9 +110,9 @@ def draw_boxes(img_bgr, persons):
         # Augen/Mund Status
         status_parts = []
         if p.get("eye_status"):
-            status_parts.append(f"👁:{p['eye_status']}")
+            status_parts.append(f"Augen:{p['eye_status']}")
         if p.get("mouth_status"):
-            status_parts.append(f"👄:{p['mouth_status']}")
+            status_parts.append(f"Mund:{p['mouth_status']}")
         
         if status_parts:
             label_parts.append(" ".join(status_parts))
@@ -128,14 +128,14 @@ def draw_boxes(img_bgr, persons):
 
 def display_metadata_card(metadata, title="Metadaten"):
     """Zeigt Metadaten in einer schönen Karte an"""
-    with st.expander(f"📊 {title}", expanded=False):
+    with st.expander(f"{title}", expanded=False):
         if not metadata:
             st.info("Keine Metadaten verfügbar")
             return
         
         # Kamera-Informationen
         if any(key in metadata for key in ['camera_make', 'camera_model', 'lens']):
-            st.subheader("📷 Kamera")
+            st.subheader("Kamera")
             col1, col2, col3 = st.columns(3)
             with col1:
                 if metadata.get('camera_make'):
@@ -149,7 +149,7 @@ def display_metadata_card(metadata, title="Metadaten"):
         
         # Aufnahme-Einstellungen
         if any(key in metadata for key in ['focal_length', 'f_number', 'iso', 'exposure_time']):
-            st.subheader("⚙️ Aufnahme-Einstellungen")
+            st.subheader("Aufnahme-Einstellungen")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 if metadata.get('focal_length'):
@@ -166,12 +166,12 @@ def display_metadata_card(metadata, title="Metadaten"):
         
         # Datum und Zeit
         if metadata.get('datetime'):
-            st.subheader("🕒 Aufnahmezeit")
+            st.subheader("Aufnahmezeit")
             st.info(f"**{metadata['datetime']}**")
         
         # GPS und Standort
         if metadata.get('gps'):
-            st.subheader("📍 Standort")
+            st.subheader("Standort")
             gps = metadata['gps']
             col1, col2 = st.columns(2)
             with col1:
@@ -187,7 +187,7 @@ def display_metadata_card(metadata, title="Metadaten"):
         
         # Bildgröße
         if metadata.get('image_width') and metadata.get('image_height'):
-            st.subheader("📐 Bildgröße")
+            st.subheader("Bildgröße")
             st.metric("Auflösung", f"{metadata['image_width']} × {metadata['image_height']} Pixel")
 
 def display_face_analysis(persons):
@@ -196,7 +196,7 @@ def display_face_analysis(persons):
         st.info("Keine Gesichter erkannt")
         return
     
-    st.subheader("👥 Gesichtsanalyse")
+    st.subheader("Gesichtsanalyse")
     
     for i, person in enumerate(persons):
         with st.expander(f"Person {i+1}", expanded=False):
@@ -206,9 +206,9 @@ def display_face_analysis(persons):
                 # Basis-Informationen
                 st.write("**Identifikation:**")
                 if person.get("name"):
-                    st.success(f"✅ {person['name']} (Ähnlichkeit: {person.get('similarity', 0):.2f})")
+                    st.success(f"{person['name']} (Ähnlichkeit: {person.get('similarity', 0):.2f})")
                 else:
-                    st.warning("❓ Unbekannte Person")
+                    st.warning("Unbekannte Person")
                 
                 # Demografie
                 st.write("**Demografie:**")
@@ -232,21 +232,15 @@ def display_face_analysis(persons):
                 # Emotion und Status
                 st.write("**Gesichtsausdruck:**")
                 if person.get("emotion"):
-                    emotion_icons = {"happy": "😊", "neutral": "😐", "unknown": "❓"}
-                    icon = emotion_icons.get(person["emotion"], "❓")
-                    st.write(f"{icon} {person['emotion']}")
+                    st.write(f"{person['emotion']}")
                 
                 # Augen-Status
                 if person.get("eye_status"):
-                    eye_icons = {"open": "👁️", "partially_open": "😑", "closed": "😴"}
-                    icon = eye_icons.get(person["eye_status"], "👁️")
-                    st.write(f"{icon} Augen: {person['eye_status']}")
+                    st.write(f"Augen: {person['eye_status']}")
                 
                 # Mund-Status
                 if person.get("mouth_status"):
-                    mouth_icons = {"open": "😮", "closed": "😐"}
-                    icon = mouth_icons.get(person["mouth_status"], "😐")
-                    st.write(f"{icon} Mund: {person['mouth_status']}")
+                    st.write(f"Mund: {person['mouth_status']}")
 
 results: List[Dict[str, Any]] = []
 
@@ -323,7 +317,7 @@ if files:
         results.append(record)
 
         # Anzeige
-        st.header(f"📸 {up.name}")
+        st.header(f"{up.name}")
         
         # Bildanzeige
         col1, col2 = st.columns(2)
@@ -334,11 +328,11 @@ if files:
             st.image(cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB), caption="Erkannte Gesichter", use_container_width=True)
         
         # Metadaten anzeigen
-        display_metadata_card(metadata, "📊 Bild-Metadaten")
+        display_metadata_card(metadata, "Bild-Metadaten")
         
         # Standort anzeigen
         if location_info:
-            with st.expander("📍 Standort-Informationen", expanded=False):
+            with st.expander("Standort-Informationen", expanded=False):
                 if location_info.get('full_address'):
                     st.info(f"**Adresse:** {location_info['full_address']}")
                 
@@ -358,7 +352,7 @@ if files:
         display_face_analysis(persons)
         
         # JSON-Export (kollabiert)
-        with st.expander("📄 JSON-Daten", expanded=False):
+        with st.expander("JSON-Daten", expanded=False):
             st.json(record)
         
         st.divider()
@@ -369,35 +363,35 @@ if files:
     status_text.text("Verarbeitung abgeschlossen!")
     
     # Download-Button für alle Ergebnisse
-    st.success(f"✅ {len(results)} Bilder erfolgreich verarbeitet")
+    st.success(f"{len(results)} Bilder erfolgreich verarbeitet")
     
     # Download-Button
     col1, col2 = st.columns(2)
     with col1:
-        st.download_button("⬇️ Download results JSON",
+        st.download_button("Download results JSON",
                            data=json.dumps(results, ensure_ascii=False, indent=2),
                            file_name="results.json",
                            mime="application/json")
     with col2:
-        st.info("💡 Tipp: Laden Sie diese JSON-Datei in der 'Analyze'-Seite hoch für erweiterte Statistiken!")
+        st.info("Tipp: Laden Sie diese JSON-Datei in der 'Analyze'-Seite hoch für erweiterte Statistiken!")
 else:
-    st.info("📁 Bilder in der Sidebar hochladen, um zu starten.")
+    st.info("Bilder in der Sidebar hochladen, um zu starten.")
     
     # Download-Button auch ohne Bilder (für Beispiel-Daten)
-    st.subheader("💾 Export-Optionen")
+    st.subheader("Export-Optionen")
     st.info("Nach dem Hochladen und Verarbeiten von Bildern erscheint hier ein Download-Button für die JSON-Ergebnisse.")
     
     # Beispiel-Metadaten anzeigen
-    with st.expander("ℹ️ Verfügbare Metadaten", expanded=False):
+    with st.expander("Verfügbare Metadaten", expanded=False):
         st.markdown("""
         **Diese App kann folgende Metadaten extrahieren:**
         
-        📷 **Kamera-Informationen:**
+        **Kamera-Informationen:**
         - Hersteller und Modell
         - Objektiv
         - Software
         
-        ⚙️ **Aufnahme-Einstellungen:**
+        **Aufnahme-Einstellungen:**
         - Brennweite
         - Blende (f-number)
         - ISO-Wert
@@ -405,16 +399,16 @@ else:
         - Weißabgleich
         - Belichtungsmodus
         
-        🕒 **Zeitstempel:**
+        **Zeitstempel:**
         - Aufnahmedatum und -zeit
         - GPS-Zeitstempel
         
-        📍 **Standort:**
+        **Standort:**
         - GPS-Koordinaten
         - Höhe über Meeresspiegel
         - Vollständige Adresse (mit Internetverbindung)
         
-        👥 **Gesichtsanalyse:**
+        **Gesichtsanalyse:**
         - Alter und Geschlecht
         - Gesichtsqualität
         - Emotionen

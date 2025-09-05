@@ -197,7 +197,7 @@ class EnhancedFaceEngine:
     
     def train_with_metadata(self, training_data: List[Dict]) -> Dict[str, float]:
         """Training mit Metadaten-Integration"""
-        print("🚀 Starte Training mit Metadaten-Integration...")
+        print("Starte Training mit Metadaten-Integration...")
         
         # Daten vorbereiten
         X_metadata = []
@@ -232,7 +232,7 @@ class EnhancedFaceEngine:
             self.age_model.fit(X_metadata, y_age)
             age_pred = self.age_model.predict(X_metadata)
             results['age_accuracy'] = accuracy_score(y_age, age_pred)
-            print(f"✅ Alters-Modell trainiert - Genauigkeit: {results['age_accuracy']:.3f}")
+            print(f"Alters-Modell trainiert - Genauigkeit: {results['age_accuracy']:.3f}")
         
         # Geschlechts-Modell
         if len(y_gender) > 10:
@@ -240,7 +240,7 @@ class EnhancedFaceEngine:
             self.gender_model.fit(X_metadata, y_gender)
             gender_pred = self.gender_model.predict(X_metadata)
             results['gender_accuracy'] = accuracy_score(y_gender, gender_pred)
-            print(f"✅ Geschlechts-Modell trainiert - Genauigkeit: {results['gender_accuracy']:.3f}")
+            print(f"Geschlechts-Modell trainiert - Genauigkeit: {results['gender_accuracy']:.3f}")
         
         # Qualitäts-Modell
         if len(y_quality) > 10:
@@ -248,7 +248,7 @@ class EnhancedFaceEngine:
             self.quality_model.fit(X_metadata, y_quality)
             quality_pred = self.quality_model.predict(X_metadata)
             results['quality_accuracy'] = accuracy_score(y_quality, quality_pred)
-            print(f"✅ Qualitäts-Modell trainiert - Genauigkeit: {results['quality_accuracy']:.3f}")
+            print(f"Qualitäts-Modell trainiert - Genauigkeit: {results['quality_accuracy']:.3f}")
         
         # Metadaten-Bias berechnen
         self._calculate_metadata_bias(training_data)
@@ -258,7 +258,7 @@ class EnhancedFaceEngine:
     
     def _calculate_metadata_bias(self, training_data: List[Dict]):
         """Berechnet Metadaten-Bias für Korrekturen"""
-        print("📊 Berechne Metadaten-Bias...")
+        print("Berechne Metadaten-Bias...")
         
         # Standort-Alter-Bias
         location_age_data = {}
@@ -396,7 +396,7 @@ class EnhancedFaceEngine:
             'metadata_weights': self.metadata_weights
         }
         joblib.dump(models, path)
-        print(f"💾 Modelle gespeichert: {path}")
+        print(f"Modelle gespeichert: {path}")
     
     def load_models(self, path: str):
         """Lädt trainierte Modelle"""
@@ -408,9 +408,9 @@ class EnhancedFaceEngine:
             self.location_age_bias = models.get('location_age_bias', {})
             self.time_gender_bias = models.get('time_gender_bias', {})
             self.metadata_weights = models.get('metadata_weights', self.metadata_weights)
-            print(f"📂 Modelle geladen: {path}")
+            print(f"Modelle geladen: {path}")
         else:
-            print(f"⚠️ Modell-Datei nicht gefunden: {path}")
+            print(f"Modell-Datei nicht gefunden: {path}")
 
 class MetadataAwareTrainer:
     """Trainer für metadaten-bewusste Gesichtserkennung"""
@@ -425,7 +425,7 @@ class MetadataAwareTrainer:
     
     def prepare_training_data(self, data_directory: str) -> List[Dict]:
         """Bereitet Trainingsdaten vor"""
-        print(f"📁 Lade Trainingsdaten aus: {data_directory}")
+        print(f"Lade Trainingsdaten aus: {data_directory}")
         
         training_data = []
         
@@ -443,19 +443,19 @@ class MetadataAwareTrainer:
             except Exception as e:
                 print(f"⚠️ Fehler beim Laden von {json_file}: {e}")
         
-        print(f"✅ {len(training_data)} Trainingsbeispiele geladen")
+        print(f"{len(training_data)} Trainingsbeispiele geladen")
         return training_data
     
     def train(self, training_data: List[Dict], validation_split: float = 0.2) -> Dict[str, Any]:
         """Training mit Validierung"""
-        print("🎯 Starte Training...")
+        print("Starte Training...")
         
         # Daten aufteilen
         split_idx = int(len(training_data) * (1 - validation_split))
         train_data = training_data[:split_idx]
         val_data = training_data[split_idx:]
         
-        print(f"📊 Training: {len(train_data)} Beispiele, Validierung: {len(val_data)} Beispiele")
+        print(f"Training: {len(train_data)} Beispiele, Validierung: {len(val_data)} Beispiele")
         
         # Training
         train_results = self.engine.train_with_metadata(train_data)
@@ -490,7 +490,7 @@ class MetadataAwareTrainer:
     
     def _validate_models(self, validation_data: List[Dict]) -> Dict[str, float]:
         """Validierung der trainierten Modelle"""
-        print("🔍 Validiere Modelle...")
+        print("Validiere Modelle...")
         
         # Hier würde die Validierung implementiert
         # Für jetzt geben wir Beispiel-Metriken zurück
@@ -511,18 +511,18 @@ class MetadataAwareTrainer:
     def _print_training_summary(self, summary: Dict):
         """Druckt Trainings-Zusammenfassung"""
         print("\n" + "="*50)
-        print("📊 TRAININGS-ZUSAMMENFASSUNG")
+        print("TRAININGS-ZUSAMMENFASSUNG")
         print("="*50)
         
-        print("\n🎯 Training-Metriken:")
+        print("\nTraining-Metriken:")
         for metric, value in summary['training'].items():
             print(f"  {metric}: {value:.3f}")
         
-        print("\n✅ Validierungs-Metriken:")
+        print("\nValidierungs-Metriken:")
         for metric, value in summary['validation'].items():
             print(f"  {metric}: {value:.3f}")
         
-        print("\n📈 Verbesserungen:")
+        print("\nVerbesserungen:")
         for metric, improvement in summary['improvement'].items():
             print(f"  {metric}: {improvement:+.3f}")
         

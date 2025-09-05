@@ -1,4 +1,4 @@
-# 🎯 Trainingsplan: Metadaten-basierte KI-Optimierung
+# Trainingsplan: Metadaten-basierte KI-Optimierung
 
 ## **Phase 1: Datensammlung und Vorbereitung (2-3 Wochen)**
 

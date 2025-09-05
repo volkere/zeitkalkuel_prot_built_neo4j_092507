@@ -1,6 +1,6 @@
 
 import streamlit as st
-st.set_page_config(page_title="Photo Metadata Suite", page_icon="📷", layout="wide")
+st.set_page_config(page_title="Photo Metadata Suite", layout="wide")
 st.title("Zeitkalkül Metadata Recognizer")
 st.markdown("""
 Wähle links eine Seite:

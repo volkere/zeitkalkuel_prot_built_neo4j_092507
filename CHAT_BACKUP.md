@@ -1,6 +1,6 @@
 # Zeitkalkuel Chat Backup - Vollständige Dokumentation
 
-## 📋 **Chat-Verlauf Zusammenfassung**
+## **Chat-Verlauf Zusammenfassung**
 
 **Datum:** Dezember 2024  
 **Projekt:** Zeitkalkuel - Gesichtserkennung mit Metadaten-Optimierung  
@@ -8,7 +8,7 @@
 
 ---
 
-## 🎯 **Hauptanfragen und Lösungen**
+## **Hauptanfragen und Lösungen**
 
 ### **1. Ursprüngliche Anfrage**
 > "wie kann ich diese app auf personen optimieren, damit sie die metadaten aus diesen fotos besser erkennt"
@@ -52,7 +52,7 @@
 
 ---
 
-## 🛠️ **Implementierte Funktionen**
+## **Implementierte Funktionen**
 
 ### **Erweiterte Gesichtserkennung**
 - **Qualitätsbewertung** für jedes erkannte Gesicht
@@ -79,7 +79,7 @@
 
 ---
 
-## 📁 **Wichtige Dateien und Änderungen**
+## **Wichtige Dateien und Änderungen**
 
 ### **Kern-Dateien**
 - `app/face_recognizer.py` - Erweiterte Gesichtserkennung
@@ -102,7 +102,7 @@
 
 ---
 
-## 🔧 **Behobene Probleme**
+## **Behobene Probleme**
 
 ### **Problem 1: Fehlender Download-Button**
 > "ich finde keinen download button auf der annotate seite"
@@ -112,7 +112,7 @@
 ### **Problem 2: Deprecation Warning**
 > "The use_column_width parameter has been deprecated"
 
-**Lösung:** `use_column_width=True` → `use_container_width=True` ersetzt
+**Lösung:** `use_column_width=True` -> `use_container_width=True` ersetzt
 
 ### **Problem 3: Python/Pip nicht gefunden**
 > "zsh: command not found: pip"
@@ -121,7 +121,7 @@
 
 ---
 
-## �� **Aktueller Status**
+## **Aktueller Status**
 
 ### **Repository**
 - **Haupt-Repo:** `/Users/volkerenkrodt/myproject/zeitkalkuel/zeitkalkuel_test`
@@ -136,7 +136,7 @@
 
 ---
 
-## 📖 **Train-Option Anleitung**
+## **Train-Option Anleitung**
 
 ### **Was ist die Train-Option?**
 Die Train-Seite ermöglicht es, die Gesichtserkennung mit Metadaten zu trainieren für bessere Genauigkeit.
@@ -157,7 +157,7 @@ Die Train-Seite ermöglicht es, die Gesichtserkennung mit Metadaten zu trainiere
 
 ---
 
-## 💡 **Nächste Schritte**
+## **Nächste Schritte**
 
 1. **App im Browser öffnen:** `http://localhost:8501`
 2. **Annotate-Seite testen** mit eigenen Fotos
@@ -167,7 +167,7 @@ Die Train-Seite ermöglicht es, die Gesichtserkennung mit Metadaten zu trainiere
 
 ---
 
-## 🔗 **Wichtige URLs**
+## **Wichtige URLs**
 
 - **Lokale App:** `http://localhost:8501`
 - **Netzwerk-App:** `http://192.168.179.54:8501`
@@ -176,7 +176,7 @@ Die Train-Seite ermöglicht es, die Gesichtserkennung mit Metadaten zu trainiere
 
 ---
 
-## 📞 **Support**
+## **Support**
 
 Bei Fragen oder Problemen:
 1. **README.md** lesen für grundlegende Anleitung
