@@ -1,5 +1,5 @@
 
-Zeitkalkül agent_prot 0925
+Zeitkalkül agent_prot_092505
 
 Erweiterte Foto-Metadaten-Analyse mit Gesichtserkennung, EXIF-Extraktion und intelligenten Analysen.  
 (Enthält eine CLI und eine Streamlit Multi-Page UI (Enroll + Annotate + Analyze)).
