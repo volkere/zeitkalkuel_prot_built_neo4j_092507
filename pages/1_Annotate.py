@@ -1,5 +1,5 @@
 
-import io, json, tempfile
+import io, json, tempfile, os
 from typing import List, Dict, Any
 import streamlit as st
 import numpy as np
@@ -8,6 +8,7 @@ import cv2
 
 from app.face_recognizer import FaceEngine, GalleryDB
 from app.location import extract_exif_gps, reverse_geocode, extract_comprehensive_metadata, get_location_details
+from app.utils import parse_datetime_string, assess_image_quality, extract_color_histogram, analyze_image_composition
 
 st.title("Annotate: Fotos analysieren")
 st.caption("Erweiterte Gesichtserkennung, Metadaten-Extraktion und Standortanalyse")
@@ -32,6 +33,8 @@ with st.sidebar:
     # Gesichtserkennung
     st.subheader("Gesichtserkennung")
     det = st.slider("Detector size", 320, 1024, 640, 64, key="det_annot")
+    max_faces = st.slider("Max. Gesichter pro Bild", 1, 20, 10, 1)
+    min_det_score = st.slider("Min. Erkennungs-Score", 0.1, 1.0, 0.5, 0.05)
     threshold = st.slider("Identity threshold (cosine)", 0.3, 0.9, 0.55, 0.01)
     
     # Metadaten
@@ -44,6 +47,37 @@ with st.sidebar:
     st.subheader("Qualitätsfilter")
     min_quality = st.slider("Min. Gesichtsqualität", 0.0, 1.0, 0.3, 0.1)
     min_face_size = st.slider("Min. Gesichtsgröße (Pixel)", 50, 200, 80, 10)
+
+    # Rendering
+    st.subheader("Darstellung")
+    draw_landmarks = st.checkbox("Landmarks einzeichnen", value=True)
+    draw_pose = st.checkbox("Pose anzeigen (Yaw/Pitch/Roll)", value=False)
+    blur_unknown = st.checkbox("Unbekannte Gesichter weichzeichnen", value=False)
+    show_json_each = st.checkbox("JSON pro Bild anzeigen", value=False)
+
+    # Personen & Tanz
+    st.subheader("Personen/Dance")
+    enable_dance = st.checkbox("Dance-Erkennung aktivieren (CLIP Zero-shot)", value=False)
+    dance_labels_text = st.text_input(
+        "Dance-Klassen (Kommagetrennt)",
+        value="ballet, hip hop, salsa, tango, waltz, breakdance, contemporary, flamenco, bharatanatyam, samba"
+    )
+    dance_use_face_crop = st.checkbox("Nur Gesichtsbereich (mit Rand) verwenden", value=True)
+
+    # Datum/Zeit
+    st.subheader("Datum/Zeit")
+    enrich_datetime = st.checkbox("Zeit-Features (Wochentag/Tagesteil) berechnen", value=True)
+    mtime_fallback = st.checkbox("Dateizeit als Fallback nutzen (falls Pfad verfügbar)", value=False)
+
+    # Standort
+    st.subheader("Standort")
+    include_map_links = st.checkbox("Karten-Links in JSON aufnehmen", value=True)
+
+    # Bild-Analyse
+    st.subheader("Bild-Analyse")
+    do_quality = st.checkbox("Bildqualitäts-Metriken berechnen", value=True)
+    do_color_hist = st.checkbox("Farb-Histogramme extrahieren", value=False)
+    do_composition = st.checkbox("Bildkomposition analysieren", value=False)
     
     # Datei-Upload
     st.subheader("Dateien")
@@ -116,6 +150,10 @@ def draw_boxes(img_bgr, persons):
         
         if status_parts:
             label_parts.append(" ".join(status_parts))
+
+        # Dance
+        if p.get("dance"):
+            label_parts.append(f"Dance:{p['dance']}")
         
         txt = " | ".join(label_parts) if label_parts else f"{p.get('prob', 1.0):.2f}"
         
@@ -125,6 +163,41 @@ def draw_boxes(img_bgr, persons):
         cv2.putText(img, txt, (x1, max(0,y1-8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, cv2.LINE_AA)
     
     return img
+
+
+@st.cache_resource(show_spinner=False)
+def _load_clip_for_dance():
+    import torch
+    from transformers import CLIPModel, CLIPProcessor
+    model_id = "openai/clip-vit-base-patch32"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = CLIPModel.from_pretrained(model_id).to(device)
+    processor = CLIPProcessor.from_pretrained(model_id)
+    model.eval()
+    return model, processor, device
+
+
+def _prepare_dance_text_embeddings(labels: list):
+    import torch
+    model, processor, device = _load_clip_for_dance()
+    prompts = [f"a person performing {lbl.strip()} dance" for lbl in labels]
+    with torch.no_grad():
+        inputs = processor(text=prompts, return_tensors="pt", padding=True).to(device)
+        text_features = model.get_text_features(**inputs)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+    return text_features, device, model, processor
+
+
+def _infer_dance_for_face(pil_image, text_features, device, model, processor, labels: list):
+    import torch
+    with torch.no_grad():
+        inputs = processor(images=pil_image, return_tensors="pt").to(device)
+        img_feat = model.get_image_features(**inputs)
+        img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
+        logits = img_feat @ text_features.T
+        probs = torch.softmax(logits, dim=-1)[0].cpu().numpy()
+        top_idx = int(np.argmax(probs))
+        return labels[top_idx], float(probs[top_idx])
 
 def display_metadata_card(metadata, title="Metadaten"):
     """Zeigt Metadaten in einer schönen Karte an"""
@@ -243,6 +316,7 @@ def display_face_analysis(persons):
                     st.write(f"Mund: {person['mouth_status']}")
 
 results: List[Dict[str, Any]] = []
+annotated_images = []  # (filename, image_bytes)
 
 if files:
     progress_bar = st.progress(0)
@@ -257,6 +331,11 @@ if files:
 
         # Gesichtserkennung
         faces = st.session_state["engine_annot"].analyze(img_bgr)
+        # Score-Filter und Limit
+        faces = [f for f in faces if f.get('prob', 1.0) >= min_det_score]
+        if max_faces and len(faces) > max_faces:
+            faces.sort(key=lambda f: f.get('prob', 0.0), reverse=True)
+            faces = faces[:max_faces]
         
         # Qualitätsfilter anwenden
         filtered_faces = []
@@ -267,12 +346,30 @@ if files:
                 filtered_faces.append(f)
         
         persons = []
+        # Dance setup (cached per label set)
+        dance_labels = [l.strip() for l in dance_labels_text.split(',') if l.strip()]
+        if enable_dance and dance_labels:
+            key = ("dance_text_embeds", tuple(dance_labels))
+            cache = st.session_state.get("dance_cache") or {}
+            if cache.get("labels_key") != key:
+                text_features, device, model, processor = _prepare_dance_text_embeddings(dance_labels)
+                st.session_state["dance_cache"] = {
+                    "labels_key": key,
+                    "text_features": text_features,
+                    "device": device,
+                    "model": model,
+                    "processor": processor,
+                }
+            text_features = st.session_state["dance_cache"]["text_features"]
+            device = st.session_state["dance_cache"]["device"]
+            model = st.session_state["dance_cache"]["model"]
+            processor = st.session_state["dance_cache"]["processor"]
         for f in filtered_faces:
             name, sim = (None, None)
             if db:
                 n, s = db.match(f["embedding"], threshold=threshold)
                 name, sim = (n, s)
-            persons.append({
+            person_entry = {
                 "bbox": f["bbox"],
                 "prob": f["prob"],
                 "name": name,
@@ -283,7 +380,31 @@ if files:
                 "emotion": f.get("emotion"),
                 "eye_status": f.get("eye_status"),
                 "mouth_status": f.get("mouth_status")
-            })
+            }
+
+            # Dance inference per face (optional)
+            if enable_dance and dance_labels:
+                try:
+                    x1,y1,x2,y2 = map(int, f["bbox"])
+                    if dance_use_face_crop:
+                        # expand bbox
+                        h, w = img_bgr.shape[:2]
+                        dx = int((x2 - x1) * 0.5)
+                        dy = int((y2 - y1) * 0.8)
+                        xx1 = max(0, x1 - dx)
+                        yy1 = max(0, y1 - dy)
+                        xx2 = min(w, x2 + dx)
+                        yy2 = min(h, y2 + dy)
+                    else:
+                        xx1, yy1, xx2, yy2 = 0, 0, img_bgr.shape[1], img_bgr.shape[0]
+                    crop = Image.fromarray(cv2.cvtColor(img_bgr[yy1:yy2, xx1:xx2], cv2.COLOR_BGR2RGB))
+                    dance_label, dance_score = _infer_dance_for_face(crop, text_features, device, model, processor, dance_labels)
+                    person_entry["dance"] = dance_label
+                    person_entry["dance_score"] = dance_score
+                except Exception:
+                    pass
+
+            persons.append(person_entry)
 
         # Metadaten-Extraktion
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=True) as tmp:
@@ -297,6 +418,44 @@ if files:
                 gps_data = extract_exif_gps(tmp.name)
                 if gps_data:
                     metadata['gps'] = gps_data
+
+        # Bild-Analyse (optional)
+        image_analysis = {}
+        if do_quality:
+            image_analysis['quality'] = assess_image_quality(img_bgr)
+        if do_color_hist:
+            # Nur normalisierte Histogramme in JSON
+            hist = extract_color_histogram(img_bgr)
+            image_analysis['color_hist'] = {k: v.tolist() for k, v in hist.items() if k.endswith('_normalized')}
+        if do_composition:
+            image_analysis['composition'] = analyze_image_composition(img_bgr)
+
+        # Datum/Zeit anreichern
+        if enrich_datetime and metadata.get('datetime'):
+            dt = parse_datetime_string(metadata['datetime'])
+            if dt:
+                hour = dt.hour
+                if 6 <= hour < 12:
+                    part = 'morning'
+                elif 12 <= hour < 17:
+                    part = 'afternoon'
+                elif 17 <= hour < 21:
+                    part = 'evening'
+                else:
+                    part = 'night'
+                metadata['time'] = {
+                    'hour': hour,
+                    'weekday': dt.strftime('%A'),
+                    'part_of_day': part
+                }
+
+        # Map-Links
+        if include_map_links and metadata.get('gps'):
+            lat, lon = metadata['gps']['lat'], metadata['gps']['lon']
+            metadata['gps']['map_links'] = {
+                'openstreetmap': f"https://www.openstreetmap.org/?mlat={lat:.6f}&mlon={lon:.6f}#map=16/{lat:.6f}/{lon:.6f}",
+                'google_maps': f"https://maps.google.com/?q={lat:.6f},{lon:.6f}"
+            }
         
         # Standort-Informationen
         location_info = None
@@ -311,6 +470,7 @@ if files:
         record = {
             "image": up.name,
             "metadata": metadata,
+            "image_analysis": image_analysis,
             "location": location_info,
             "persons": persons
         }
@@ -325,10 +485,62 @@ if files:
             st.image(image, caption="Original", use_container_width=True)
         with col2:
             boxed = draw_boxes(img_bgr, persons)
-            st.image(cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB), caption="Erkannte Gesichter", use_container_width=True)
+            # Optional: Zusätzliche Darstellung
+            if draw_landmarks or draw_pose or blur_unknown:
+                vis = boxed.copy()
+                # Landmarks
+                if draw_landmarks:
+                    for f in filtered_faces:
+                        kps = f.get('landmarks')
+                        if kps:
+                            for (x, y) in kps:
+                                cv2.circle(vis, (int(x), int(y)), 1, (255, 0, 0), -1)
+                # Pose
+                if draw_pose:
+                    for f in filtered_faces:
+                        pose = f.get('pose')
+                        if pose:
+                            x1,y1,x2,y2 = map(int, f['bbox'])
+                            txt = f"Y:{pose['yaw']:.1f} P:{pose['pitch']:.1f} R:{pose['roll']:.1f}"
+                            cv2.putText(vis, txt, (x1, y2 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
+                # Blur unbekannt
+                if blur_unknown:
+                    for f, p in zip(filtered_faces, persons):
+                        if p.get('name') is None:
+                            x1,y1,x2,y2 = map(int, f['bbox'])
+                            roi = vis[y1:y2, x1:x2]
+                            if roi.size > 0:
+                                roi = cv2.GaussianBlur(roi, (31,31), 15)
+                                vis[y1:y2, x1:x2] = roi
+                boxed = vis
+            rgb_vis = cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB)
+            st.image(rgb_vis, caption="Erkannte Gesichter", use_container_width=True)
+            # Für ZIP-Export vormerken
+            import io as _io
+            buf = _io.BytesIO()
+            Image.fromarray(rgb_vis).save(buf, format="JPEG", quality=90)
+            annotated_images.append((up.name, buf.getvalue()))
         
         # Metadaten anzeigen
         display_metadata_card(metadata, "Bild-Metadaten")
+
+        # Bild-Analyse anzeigen
+        if image_analysis:
+            with st.expander("Bild-Analyse", expanded=False):
+                if image_analysis.get('quality'):
+                    q = image_analysis['quality']
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    col1.metric("Gesamtqualität", f"{q['overall_quality']:.2f}")
+                    col2.metric("Schärfe", f"{q['sharpness']:.2f}")
+                    col3.metric("Helligkeit", f"{q['brightness']:.2f}")
+                    col4.metric("Kontrast", f"{q['contrast']:.2f}")
+                    col5.metric("Rauschen", f"{q['noise_level']:.2f}")
+                if image_analysis.get('composition'):
+                    comp = image_analysis['composition']
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Auflösung", f"{comp.get('dimensions',{}).get('width','?')}×{comp.get('dimensions',{}).get('height','?')}")
+                    col2.metric("Seitenverhältnis", f"{comp.get('aspect_ratio',0):.2f}")
+                    col3.metric("Farbtemp.", comp.get('color_temperature','-'))
         
         # Standort anzeigen
         if location_info:
@@ -347,13 +559,18 @@ if files:
                     with col3:
                         if location_info.get('city'):
                             st.metric("Stadt", location_info['city'])
+                # Karten-Links, falls vorhanden
+                if metadata.get('gps', {}).get('map_links'):
+                    links = metadata['gps']['map_links']
+                    st.markdown(f"[OpenStreetMap]({links['openstreetmap']}) | [Google Maps]({links['google_maps']})")
         
         # Gesichtsanalyse anzeigen
         display_face_analysis(persons)
         
-        # JSON-Export (kollabiert)
-        with st.expander("JSON-Daten", expanded=False):
-            st.json(record)
+        # JSON-Export (optional je Bild)
+        if show_json_each:
+            with st.expander("JSON-Daten", expanded=False):
+                st.json(record)
         
         st.divider()
         
@@ -373,7 +590,16 @@ if files:
                            file_name="results.json",
                            mime="application/json")
     with col2:
-        st.info("Tipp: Laden Sie diese JSON-Datei in der 'Analyze'-Seite hoch für erweiterte Statistiken!")
+        import zipfile as _zipfile
+        import io as _io
+        if annotated_images:
+            zip_buf = _io.BytesIO()
+            with _zipfile.ZipFile(zip_buf, mode="w", compression=_zipfile.ZIP_DEFLATED) as zf:
+                for fname, data_bytes in annotated_images:
+                    base = os.path.splitext(os.path.basename(fname))[0]
+                    zf.writestr(f"annotated/{base}_annotated.jpg", data_bytes)
+            st.download_button("Download annotated images (ZIP)", data=zip_buf.getvalue(), file_name="annotated_images.zip", mime="application/zip")
+        st.info("Tipp: Laden Sie die JSON-Datei in der 'Analyze'-Seite hoch für Statistiken!")
 else:
     st.info("Bilder in der Sidebar hochladen, um zu starten.")
     

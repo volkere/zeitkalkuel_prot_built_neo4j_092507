@@ -1,7 +1,7 @@
 
 import streamlit as st
 st.set_page_config(page_title="Photo Metadata Suite", layout="wide")
-st.title("Zeitkalkül Metadata Recognizer")
+st.title("Zeitkalkül Agent (prototype)")
 st.markdown("""
 Wähle links eine Seite:
 
@@ -9,6 +9,8 @@ Wähle links eine Seite:
 - **Annotate**: Fotos mit erweiterten Metadaten analysieren  
 - **Analyze**: Erweiterte Statistiken und Visualisierungen
 - **Train**: KI-Training mit Metadaten für bessere Genauigkeit
+
+ - **Image Search**: Semantische Bildsuche mit CLIP-Embeddings
 
 ### Neue Features:
 
