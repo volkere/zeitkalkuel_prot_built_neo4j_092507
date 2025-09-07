@@ -20,7 +20,7 @@ if "engine_enroll" not in st.session_state or st.session_state.get("det_enroll")
 tab_zip, tab_manual = st.tabs(["Galerie-ZIP hochladen", "Manuell pro Person"])
 
 with tab_zip:
-    st.markdown("**ZIP-Struktur:** `PersonA/*.jpg`, `PersonB/*.png`, …")
+    st.markdown("ZIP-Struktur: `PersonA/*.jpg`, `PersonB/*.png`, …")
     zip_file = st.file_uploader("Galerie-ZIP auswählen", type=["zip"])
     if zip_file is not None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -48,7 +48,7 @@ with tab_zip:
             st.download_button("embeddings.pkl herunterladen", data=b.getvalue(), file_name="embeddings.pkl", mime="application/octet-stream")
 
 with tab_manual:
-    st.markdown("Name eingeben, Bilder hochladen, **Hinzufügen** klicken.")
+    st.markdown("Name eingeben, Bilder hochladen, Hinzufügen klicken.")
     if "manual_db" not in st.session_state:
         st.session_state["manual_db"] = GalleryDB()
     name = st.text_input("Name der Person")
@@ -67,7 +67,7 @@ with tab_manual:
             faces.sort(key=lambda f: (f['bbox'][2]-f['bbox'][0])*(f['bbox'][3]-f['bbox'][1]), reverse=True)
             st.session_state["manual_db"].add(name, faces[0]["embedding"])
             added += 1
-        st.success(f"{added} Bild(er) für **{name}** hinzugefügt.")
+        st.success(f"{added} Bild(er) für {name} hinzugefügt.")
     if st.session_state["manual_db"].people:
         st.info(f"Aktueller DB-Status: {len(st.session_state['manual_db'].people)} Personen.")
         b = io.BytesIO()

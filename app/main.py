@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from app.face_recognizer import FaceEngine, GalleryDB, build_gallery_from_folder
 from app.location import extract_exif_gps, reverse_geocode
+from app.graph_persistence import Neo4jPersistence
 
 def collect_images(path: str, recursive: bool=False) -> List[str]:
     exts = (".jpg",".jpeg",".png",".bmp",".webp",".tif",".tiff")
@@ -66,6 +67,19 @@ def cmd_annotate(args):
         json.dump(out_records, f, ensure_ascii=False, indent=2)
     print(f"Wrote annotations for {len(out_records)} images to {args.out}")
 
+def cmd_import_neo4j(args):
+    with open(args.json, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        if not isinstance(data, list):
+            data = [data]
+    neo = Neo4jPersistence(args.uri, args.user, args.password)
+    try:
+        neo.init_constraints()
+        neo.upsert_annotations(data)
+        print(f"Imported {len(data)} records into Neo4j")
+    finally:
+        neo.close()
+
 def build_parser():
     p = argparse.ArgumentParser(description="Photo metadata annotator")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -85,6 +99,13 @@ def build_parser():
     p_annot.add_argument("--threshold", type=float, default=0.55, help="Cosine similarity threshold for identity match")
     p_annot.add_argument("--det", type=int, default=640, help="Detector size (square)")
     p_annot.set_defaults(func=cmd_annotate)
+
+    p_neo = sub.add_parser("import-neo4j", help="Import annotation JSON into Neo4j graph store")
+    p_neo.add_argument("--json", required=True, help="Path to results.json from Annotate UI or CLI")
+    p_neo.add_argument("--uri", required=True, help="Neo4j bolt URI, e.g. bolt://localhost:7687")
+    p_neo.add_argument("--user", required=True, help="Neo4j username")
+    p_neo.add_argument("--password", required=True, help="Neo4j password")
+    p_neo.set_defaults(func=cmd_import_neo4j)
 
     return p
 

@@ -54,25 +54,25 @@ if not training_files:
     # Beispiel-Trainingsdaten anzeigen
     with st.expander("Über das Training", expanded=False):
         st.markdown("""
-        **Metadaten-basiertes Training verbessert die Gesichtserkennung durch:**
+        Metadaten-basiertes Training verbessert die Gesichtserkennung durch:
         
-        **Kontext-Awareness:**
+        Kontext-Awareness:
         - Standort-basierte Alters-Korrektur
         - Zeit-basierte Geschlechts-Vorhersage
         - Technische Metadaten für Qualitätsbewertung
         
-        **Intelligente Korrekturen:**
+        Intelligente Korrekturen:
         - Metadaten-Bias-Erkennung
         - Gewichtete Vorhersage-Kombination
         - Kontinuierliches Lernen
         
-        **Workflow:**
+        Workflow:
         1. JSON-Daten mit Metadaten hochladen
         2. Training mit Metadaten-Integration
         3. Validierung und Modell-Speicherung
         4. Integration in die Annotate-Seite
         
-        **Erwartete Verbesserungen:**
+        Erwartete Verbesserungen:
         - Alterserkennung: +15-25%
         - Geschlechtserkennung: +10-20%
         - Standort-basierte Vorhersagen: +20-30%
@@ -295,28 +295,28 @@ def display_training_results(results: Dict[str, Any]):
     # Detaillierte Ergebnisse
     with st.expander("Detaillierte Ergebnisse", expanded=False):
         if 'training' in results:
-            st.write("**Training-Metriken:**")
+            st.write("Training-Metriken:")
             for metric, value in results['training'].items():
                 st.write(f"- {metric}: {value:.3f}")
         
         if 'validation' in results:
-            st.write("**Validierungs-Metriken:**")
+            st.write("Validierungs-Metriken:")
             for metric, value in results['validation'].items():
                 st.write(f"- {metric}: {value:.3f}")
         
         if 'improvement' in results:
-            st.write("**Verbesserungen:**")
+            st.write("Verbesserungen:")
             for metric, improvement in results['improvement'].items():
                 st.write(f"- {metric}: {improvement:+.3f}")
     
     # Modell-Integration
     st.subheader("Modell-Integration")
     st.info("""
-    **So integrieren Sie das trainierte Modell:**
+    So integrieren Sie das trainierte Modell:
     
-    1. **Modell herunterladen** (Button oben)
-    2. **In Annotate-Seite hochladen** als "Enhanced Model"
-    3. **Erweiterte Erkennung aktivieren** in den Einstellungen
+    1. Modell herunterladen (Button oben)
+    2. In Annotate-Seite hochladen als "Enhanced Model"
+    3. Erweiterte Erkennung aktivieren in den Einstellungen
     
     Das trainierte Modell wird automatisch Metadaten für bessere Vorhersagen nutzen!
     """)
@@ -352,7 +352,7 @@ if test_model_file:
             
             for img_file in test_images:
                 # Hier würde die Bildverarbeitung implementiert
-                st.write(f"**{img_file.name}**: Modell geladen und bereit für Tests")
+                st.write(f"{img_file.name}: Modell geladen und bereit für Tests")
         
         # Aufräumen
         os.unlink(tmp_path)

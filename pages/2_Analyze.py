@@ -393,7 +393,7 @@ def display_grouping_analysis(data):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write(f"**Standort-Gruppen:** {len(location_groups)}")
+        st.write(f"Standort-Gruppen: {len(location_groups)}")
         for group_id, group_images in location_groups.items():
             with st.expander(f"{group_id} ({len(group_images)} Bilder)", expanded=False):
                 for img in group_images[:5]:  # Zeige nur erste 5
@@ -405,7 +405,7 @@ def display_grouping_analysis(data):
     time_groups = group_images_by_time(data, time_threshold)
     
     with col2:
-        st.write(f"**Zeit-Gruppen:** {len(time_groups)}")
+        st.write(f"Zeit-Gruppen: {len(time_groups)}")
         for group_id, group_images in time_groups.items():
             with st.expander(f"{group_id} ({len(group_images)} Bilder)", expanded=False):
                 for img in group_images[:5]:  # Zeige nur erste 5
@@ -473,34 +473,34 @@ else:
     # Beispiel-Daten anzeigen
     with st.expander("Über diese Analyse", expanded=False):
         st.markdown("""
-        **Diese Analyse-Seite bietet:**
+        Diese Analyse-Seite bietet:
         
-        **Übersicht:**
+        Übersicht:
         - Gesamtstatistiken Ihrer Fotos
         - Qualitätsbewertungen
         - Personen-Erkennung
         
-        **Gesichtsanalyse:**
+        Gesichtsanalyse:
         - Alters- und Geschlechtsverteilung
         - Qualitätsverteilung
         - Emotionsanalyse
         
-        **Kamera-Analyse:**
+        Kamera-Analyse:
         - Verwendung verschiedener Kameras
         - Brennweiten-Verteilung
         - Aufnahme-Einstellungen
         
-        **Zeitliche Analyse:**
+        Zeitliche Analyse:
         - Aufnahmen pro Tag/Stunde
         - Wochentags- und Monatsverteilung
         - Zeitliche Trends
         
-        **Standort-Analyse:**
+        Standort-Analyse:
         - Interaktive Karte
         - Höhenverteilung
         - Geografische Muster
         
-        **Gruppierung:**
+        Gruppierung:
         - Automatische Gruppierung nach Standort
         - Zeitliche Gruppierung
         - Ähnlichkeitsanalyse
