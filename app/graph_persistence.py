@@ -399,7 +399,7 @@ class Neo4jPersistence:
             return False
 
     # ------------------------- Linked Open Data (RDF) -------------------------
-    def export_rdf(self, output_file: str, fmt: str = "turtle", base_uri: str = "https://example.org/zeitkalkuel/") -> bool:
+    def export_rdf(self, output_file: str, fmt: str = "turtle", base_uri: str = "http://localhost:8000/zeitkalkuel/") -> bool:
         """Export the Neo4j graph as RDF (JSON-LD/Turtle) using simple ontology mappings.
 
         - Image → schema:ImageObject

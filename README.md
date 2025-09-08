@@ -144,7 +144,7 @@ Die Seite "Linked Open Data Export" exportiert die Neo4j-Daten als RDF in den Fo
 Verwendung:
 - Seite öffnen: "Linked Open Data Export"
 - Verbindung zur Neo4j-DB angeben (Bolt URI, User, Passwort)
-- Base-URI konfigurieren (Standard: `https://example.org/zeitkalkuel/`)
+- Base-URI konfigurieren (Standard lokal: `http://localhost:8000/zeitkalkuel/`)
 - Format wählen (`turtle` oder `json-ld`) und Export starten
 - Ergebnisdatei herunterladen
 
@@ -210,7 +210,7 @@ print(conforms); print(report)
 
 Dereferenzierbare URIs
 ----------------------
-Setzen Sie im Export/API `base_uri` auf Ihre Domain, z. B. `https://data.meine-domain.de/zeitkalkuel/`.
+Setzen Sie im Export/API `base_uri` zunächst lokal auf `http://localhost:8000/zeitkalkuel/`. Später können Sie auf eine eigene Domain wechseln (z. B. `https://data.meine-domain.de/zeitkalkuel/`).
 
 Hinweise:
 - Verwenden Sie einen Reverse‑Proxy (z. B. NGINX/Traefik), der `https://data.meine-domain.de/rdf?...` auf die FastAPI‑Instanz weiterleitet.

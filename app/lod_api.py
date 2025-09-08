@@ -23,7 +23,7 @@ def create_app() -> FastAPI:
         uri: str = Query("bolt://localhost:7687"),
         user: str = Query("neo4j"),
         password: str = Query(""),
-        base_uri: str = Query("https://example.org/zeitkalkuel/"),
+        base_uri: str = Query("http://localhost:8000/zeitkalkuel/"),
         fmt: RDFFormat = Query(RDFFormat.turtle),
     ):
         neo = Neo4jPersistence(uri, user, password)
@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
     @app.post("/validate")
     def validate_endpoint(
         rdf_format: RDFFormat = Query(RDFFormat.turtle),
-        base_uri: str = Query("https://example.org/zeitkalkuel/"),
+        base_uri: str = Query("http://localhost:8000/zeitkalkuel/"),
         uri: str = Query("bolt://localhost:7687"),
         user: str = Query("neo4j"),
         password: str = Query(""),

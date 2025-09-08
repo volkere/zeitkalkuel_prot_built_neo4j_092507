@@ -14,7 +14,7 @@ with st.sidebar:
     uri = st.text_input("Bolt URI", value=st.session_state.get("neo4j_uri", "bolt://localhost:7687"))
     user = st.text_input("User", value=st.session_state.get("neo4j_user", "neo4j"))
     pwd = st.text_input("Passwort", type="password", value=st.session_state.get("neo4j_pwd", ""))
-    base_uri = st.text_input("Base URI für Ressourcen", value="https://example.org/zeitkalkuel/")
+    base_uri = st.text_input("Base URI für Ressourcen", value="http://localhost:8000/zeitkalkuel/")
 
 col1, col2 = st.columns(2)
 fmt = col1.selectbox("Export-Format", ["turtle", "json-ld"], index=0)

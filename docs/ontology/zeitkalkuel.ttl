@@ -6,7 +6,7 @@
 @prefix exif: <http://www.w3.org/2003/12/exif/ns#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
-@prefix zk:   <https://example.org/zeitkalkuel/> .
+@prefix zk:   <http://localhost:8000/zeitkalkuel/> .
 
 zk: a rdfs:Ontology ;
   dcterms:title "Zeitkalkül Project Ontology"@en ;
