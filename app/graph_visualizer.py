@@ -1,7 +1,7 @@
 """
 Enhanced graph visualization utilities for Neo4j data.
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 import networkx as nx
 from pyvis.network import Network
 import json
@@ -23,7 +23,7 @@ class GraphVisualizer:
                                  physics: bool = True,
                                  min_degree: int = 0,
                                  show_edge_labels: bool = True,
-                                 highlight_nodes: set | None = None) -> str:
+                                 highlight_nodes: Union[set, None] = None) -> str:
         """Create an interactive network visualization using pyvis.
 
         - show_buttons: adds a control panel (physics/nodes/edges).
