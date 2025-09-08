@@ -76,12 +76,12 @@ if connected:
     with tab_data:
         st.subheader("Daten-View")
         
-        # View type selector
-        view_type = st.radio("Ansicht:", ["Tabellen", "Karten", "Diagramme", "Interaktive Graphen"], horizontal=True)
+        # View type selector (default to Graph)
+        view_type = st.radio("Ansicht:", ["Interaktive Graphen", "Tabellen", "Karten", "Diagramme"], index=0, horizontal=True)
         
         # Data type selector
         data_type = st.selectbox("Datentyp anzeigen:", [
-            "Alle Personen", "Alle Bilder", "Alle Standorte", "Alle Gesichter", 
+            "Gesamter Graph", "Alle Personen", "Alle Bilder", "Alle Standorte", "Alle Gesichter", 
             "Alle Kameras", "Alle Aufnahmen", "Alle Adressen", "Alle Tänze"
         ])
         
@@ -112,7 +112,27 @@ if connected:
             else:
                 st.error("Test-Netzwerk konnte nicht generiert werden")
         
-        if data_type == "Alle Personen":
+        if data_type == "Gesamter Graph":
+            # Always show graph for this view
+            sub = neo.get_graph_data(limit=limit)
+            if "error" in sub:
+                st.error(sub["error"])
+            elif not sub.get("nodes"):
+                st.info("Keine Daten im Graphen gefunden")
+            else:
+                gv = GraphVisualizer(height="700px")
+                html_body = gv.create_interactive_network(
+                    sub,
+                    "Gesamter Graph",
+                    show_buttons=True,
+                    physics=True,
+                    scale_by_centrality=True,
+                    min_degree=0,
+                    show_edge_labels=True
+                )
+                st_html(html_body, height=730)
+
+        elif data_type == "Alle Personen":
             query = "MATCH (p:Person) RETURN p.name as Name, p ORDER BY p.name LIMIT $limit"
             result = neo.execute_cypher(query, {"limit": limit})
             
