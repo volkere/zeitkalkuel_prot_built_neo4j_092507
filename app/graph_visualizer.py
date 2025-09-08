@@ -17,8 +17,20 @@ class GraphVisualizer:
         self.height = height
     
     def create_interactive_network(self, graph_data: Dict[str, Any], 
-                                 title: str = "Neo4j Graph") -> str:
-        """Create an interactive network visualization using pyvis."""
+                                 title: str = "Neo4j Graph",
+                                 show_buttons: bool = True,
+                                 scale_by_centrality: bool = True,
+                                 physics: bool = True,
+                                 min_degree: int = 0,
+                                 show_edge_labels: bool = True) -> str:
+        """Create an interactive network visualization using pyvis.
+
+        - show_buttons: adds a control panel (physics/nodes/edges).
+        - scale_by_centrality: node sizes based on degree centrality.
+        - physics: enable/disable force layout.
+        - min_degree: filter nodes with degree less than threshold.
+        - show_edge_labels: render edge labels.
+        """
         net = Network(
             height=self.height,
             width=self.width,
@@ -31,7 +43,7 @@ class GraphVisualizer:
         net.set_options("""
         {
             "physics": {
-                "enabled": true,
+                "enabled": %s,
                 "stabilization": {"iterations": 100},
                 "barnesHut": {
                     "gravitationalConstant": -8000,
@@ -42,8 +54,17 @@ class GraphVisualizer:
                 }
             }
         }
-        """)
+        """ % ("true" if physics else "false"))
+
+        if show_buttons:
+            try:
+                net.show_buttons(filter_=["physics", "nodes", "edges"])
+            except Exception:
+                pass
         
+        # Build a quick NetworkX graph for centrality and degree filtering
+        G = nx.DiGraph()
+
         # Add nodes
         node_colors = {
             "Person": "#ff6b6b",
@@ -62,6 +83,7 @@ class GraphVisualizer:
             node_id = node["id"]
             labels = node["labels"]
             properties = node["properties"]
+            G.add_node(node_id)
             
             # Determine node color
             color = "#95a5a6"  # default gray
@@ -115,6 +137,7 @@ class GraphVisualizer:
         for rel in graph_data.get("relationships", []):
             rel_type = rel["type"]
             color = edge_colors.get(rel_type, "#95a5a6")
+            G.add_edge(rel["source"], rel["target"])
             
             # Create edge title
             properties = rel.get("properties", {})
@@ -125,11 +148,33 @@ class GraphVisualizer:
             net.add_edge(
                 rel["source"],
                 rel["target"],
-                label=rel_type,
+                label=(rel_type if show_edge_labels else ""),
                 title=title_text,
                 color=color,
                 width=2
             )
+
+        # Degree filter and centrality scaling
+        try:
+            if min_degree > 0:
+                low_nodes = [n for n, d in dict(G.degree()).items() if d < min_degree]
+                for n in low_nodes:
+                    if n in net.nodes_dict:
+                        net.nodes = [m for m in net.nodes if m["id"] != n]
+                # Also remove connected edges
+                net.edges = [e for e in net.edges if e["from"] not in low_nodes and e["to"] not in low_nodes]
+
+            if scale_by_centrality and len(G) > 0:
+                cent = nx.degree_centrality(G)
+                # Scale to 10..40
+                vals = list(cent.values()) or [0]
+                cmin, cmax = (min(vals), max(vals)) if vals else (0, 0)
+                for n in net.nodes:
+                    v = cent.get(n["id"], 0.0)
+                    size = 10 + (30 * ((v - cmin) / (cmax - cmin))) if cmax > cmin else 20
+                    n["size"] = max(10, min(40, size))
+        except Exception:
+            pass
         
         # Generate HTML
         html = net.generate_html()

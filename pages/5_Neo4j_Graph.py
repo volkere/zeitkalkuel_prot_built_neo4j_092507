@@ -6,6 +6,8 @@ import pandas as pd
 import streamlit as st
 
 from typing import List, Dict, Any
+from streamlit.components.v1 import html as st_html
+from app.graph_visualizer import GraphVisualizer
 
 from app.graph_persistence import Neo4jPersistence
 
@@ -96,14 +98,28 @@ if connected:
                 st.json(res)
 
     with tab_vis:
-        st.subheader("Graph-Visualisierung (vereinfachte Ansicht)")
-        limit = st.slider("Limit", 100, 5000, 500, 100)
+        st.subheader("Graph-Visualisierung")
+        limit = st.slider("Limit", 100, 10000, 1000, 100)
+        show_buttons = st.checkbox("Steuerung anzeigen (Physik/Nodes/Edges)", True)
+        physics = st.checkbox("Physik aktiv", True)
+        scale_cent = st.checkbox("Größe nach Zentralität", True)
+        min_deg = st.slider("Minimaler Knotengrad (Filter)", 0, 5, 0)
+        show_edge_labels = st.checkbox("Kanten-Labels anzeigen", False)
+
         data = neo.get_graph_data(limit=limit)
         if "error" in data:
             st.error(data["error"])
         else:
-            st.caption(f"Nodes: {len(data.get('nodes', []))}, Relationships: {len(data.get('relationships', []))}")
-            st.json(data)
+            gv = GraphVisualizer(height="700px")
+            html_body = gv.create_interactive_network(
+                data,
+                show_buttons=show_buttons,
+                scale_by_centrality=scale_cent,
+                physics=physics,
+                min_degree=min_deg,
+                show_edge_labels=show_edge_labels,
+            )
+            st_html(html_body, height=740)
 
     with tab_admin:
         st.subheader("Verwaltung")
