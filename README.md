@@ -159,3 +159,54 @@ Ontologie-Mapping (vereinfachte Zuordnung):
 Abhängigkeit: `rdflib` (bereits in `requirements.txt`).
 
 
+LOD API (FastAPI)
+-----------------
+Zusätzlich zur Streamlit-Seite steht eine HTTP‑API zur Verfügung, die RDF on‑the‑fly erzeugt und SHACL‑Validierung anbietet.
+
+Starten:
+```bash
+uvicorn app.lod_api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Endpunkte:
+- RDF Export: `GET /rdf?uri=bolt://localhost:7687&user=neo4j&password=...&base_uri=https://example.org/zeitkalkuel/&fmt=turtle`
+  - `fmt`: `turtle` | `json-ld` | `nt`
+- SHACL Validation: `POST /validate?uri=...&user=...&password=...&base_uri=...&rdf_format=turtle`
+
+Beispiele:
+```bash
+curl "http://localhost:8000/rdf?fmt=turtle" -o graph.ttl
+curl -X POST "http://localhost:8000/validate?rdf_format=turtle" -i
+```
+
+Ontologie-Mappings
+------------------
+Die RDF-Serialisierung nutzt folgende Vokabulare:
+- `schema.org` (z. B. `schema:ImageObject`, `schema:Place`, `schema:Event`, `schema:PostalAddress`)
+- `wgs84_pos` (`geo:lat`, `geo:long`)
+- `FOAF` (`foaf:Person`, `foaf:name`)
+- `EXIF` (z. B. `exif:make`, `exif:model`, `exif:lens`, `exif:dateTimeOriginal` – Best‑Effort aus vorhandenen Attributen)
+- `IPTC` (Platzhalter für Foto-Metadaten, Best‑Effort)
+- `PROV-O` (`prov:generatedAtTime` für Aufnahmereignisse)
+
+SHACL‑Validierung
+-----------------
+Shapes-Datei: `docs/SHACL/zeitkalkuel_shapes.ttl` (Image mit Titel, Person mit Name, Place mit lat/long).
+
+Programmatisch:
+```python
+from app.shacl_validate import validate_rdf
+conforms, report = validate_rdf(open("graph.ttl","rb").read(), rdf_format="turtle")
+print(conforms); print(report)
+```
+
+Dereferenzierbare URIs
+----------------------
+Setzen Sie im Export/API `base_uri` auf Ihre Domain, z. B. `https://data.meine-domain.de/zeitkalkuel/`.
+
+Hinweise:
+- Verwenden Sie einen Reverse‑Proxy (z. B. NGINX/Traefik), der `https://data.meine-domain.de/rdf?...` auf die FastAPI‑Instanz weiterleitet.
+- Bewahren Sie stabile Bezeichner (z. B. Hash des Bildes) für Ressource‑URIs.
+- Für Content‑Negotiation per Query‑Param `fmt` (`turtle|json-ld|nt`).
+
+
