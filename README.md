@@ -131,7 +131,8 @@ Kurzüberblick:
 - Verbindung: Bolt-URI, Benutzer, Passwort in der Sidebar angeben und verbinden
 - Import: JSON-Ergebnisse (aus "Annotate") in die DB importieren
 - Abfragen: Eigene Cypher-Queries ausführen
-- Visualisierung: Interaktives Netzwerk (pyvis) oder statisch (networkx)
+- Visualisierung: Interaktives Netzwerk (pyvis) mit erweiterten Steuerungsoptionen
+- Explore: Interaktive Nachbarschafts-Erweiterung und Knoten-Suche
 - Verwaltung: Export nach JSON, Datenbank leeren
 
 Weitere Details: siehe `docs/NEO4J_INTEGRATION.md`.
@@ -158,6 +159,26 @@ Bedienung (Tab "Visualisierung"):
 - Kanten-Labels anzeigen: zeigt Beschriftungen an Kanten
 
 Hinweis: Standardhöhe ist 700px, für große Graphen empfiehlt sich die aktive Physik und ggf. Erhöhung des Limits.
+
+
+Explore-Modus: Interaktive Nachbarschafts-Erweiterung
+-----------------------------------------------------
+Der neue "Explore"-Tab ermöglicht es, gezielt Knoten zu suchen und deren Nachbarschaft schrittweise zu erkunden.
+
+Features:
+- Textsuche: Durchsucht alle Knoten-Eigenschaften und Labels nach Suchbegriffen
+- Fokus-Erweiterung: Wählt einen Knoten per ID und erweitert seine Nachbarschaft (Tiefe 1-3)
+- Mehrfache Erweiterungen: Verschiedene Subgraphen werden zusammengeführt
+- Hervorhebung: Fokussierte Knoten werden visuell hervorgehoben (größere Darstellung)
+- Reset-Funktion: Löscht das Explore-Netzwerk und startet neu
+
+Bedienung (Tab "Explore"):
+- Suche: Text eingeben und "Suchen" klicken → zeigt Treffer mit ID, Labels und Properties
+- Node-ID fokussieren: Numerische ID eingeben, Tiefe wählen (1-3), "Fokussieren/Erweitern" klicken
+- Steuerung: Physik und Kanten-Labels für das Explore-Netzwerk ein-/ausschalten
+- Zurücksetzen: Löscht das gesamte Explore-Netzwerk
+
+Anwendungsfall: Starte mit einer Suche nach interessanten Knoten (z. B. Personennamen), fokussiere einen Treffer und erweitere schrittweise seine Nachbarschaft, um Zusammenhänge zu entdecken.
 
 
 Linked Open Data (LOD) Export
