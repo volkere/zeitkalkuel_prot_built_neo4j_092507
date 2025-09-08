@@ -52,8 +52,8 @@ st.info("Status: Verbunden" if connected else "Status: Nicht verbunden")
 if connected:
     neo: Neo4jPersistence = st.session_state["neo4j_conn"]
 
-    tab_info, tab_import, tab_query, tab_vis, tab_explore, tab_admin = st.tabs([
-        "Datenbank-Info", "Import", "Abfragen", "Visualisierung", "Explore", "Verwaltung"
+    tab_info, tab_data, tab_import, tab_query, tab_vis, tab_explore, tab_admin = st.tabs([
+        "Datenbank-Info", "Daten-View", "Import", "Abfragen", "Visualisierung", "Explore", "Verwaltung"
     ])
 
     with tab_info:
@@ -69,6 +69,143 @@ if connected:
             with c2:
                 st.write("Beziehungen pro Typ")
                 st.dataframe(pd.DataFrame([{"type": k, "count": v} for k, v in info.get("relationship_counts", {}).items()]))
+
+    with tab_data:
+        st.subheader("Daten-View")
+        
+        # Data type selector
+        data_type = st.selectbox("Datentyp anzeigen:", [
+            "Alle Personen", "Alle Bilder", "Alle Standorte", "Alle Gesichter", 
+            "Alle Kameras", "Alle Aufnahmen", "Alle Adressen", "Alle Tänze"
+        ])
+        
+        # Limit selector
+        limit = st.slider("Anzahl Einträge", 10, 1000, 100, 10)
+        
+        if data_type == "Alle Personen":
+            query = "MATCH (p:Person) RETURN p.name as Name, p ORDER BY p.name LIMIT $limit"
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame([{"Name": r.get("Name", "Unbekannt")} for r in result])
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Personen gefunden")
+        
+        elif data_type == "Alle Bilder":
+            query = """
+            MATCH (i:Image) 
+            OPTIONAL MATCH (i)-[:AT_LOCATION]->(l:Location)
+            OPTIONAL MATCH (i)-[:HAS_CAMERA]->(c:Camera)
+            RETURN i.name as Bildname, i.width as Breite, i.height as Höhe, 
+                   l.lat as Breitengrad, l.lon as Längengrad,
+                   c.make as Kamera_Hersteller, c.model as Kamera_Modell
+            ORDER BY i.name LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Bilder gefunden")
+        
+        elif data_type == "Alle Standorte":
+            query = """
+            MATCH (l:Location) 
+            OPTIONAL MATCH (l)-[:RESOLVED_AS]->(a:Address)
+            RETURN l.lat as Breitengrad, l.lon as Längengrad, l.altitude as Höhe,
+                   a.full_address as Adresse, a.city as Stadt, a.country as Land
+            ORDER BY l.lat, l.lon LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Standorte gefunden")
+        
+        elif data_type == "Alle Gesichter":
+            query = """
+            MATCH (f:Face)
+            OPTIONAL MATCH (f)-[:IDENTIFIED_AS]->(p:Person)
+            OPTIONAL MATCH (f)<-[:CONTAINS]-(i:Image)
+            RETURN f.emotion as Emotion, f.quality_score as Qualität, 
+                   p.name as Person, i.name as Bild
+            ORDER BY f.quality_score DESC LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Gesichter gefunden")
+        
+        elif data_type == "Alle Kameras":
+            query = """
+            MATCH (c:Camera)
+            RETURN c.make as Hersteller, c.model as Modell, c.lens as Objektiv
+            ORDER BY c.make, c.model LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Kameras gefunden")
+        
+        elif data_type == "Alle Aufnahmen":
+            query = """
+            MATCH (cap:Capture)
+            RETURN cap.datetime as Datum_Zeit, cap.hour as Stunde, 
+                   cap.weekday as Wochentag, cap.part_of_day as Tageszeit
+            ORDER BY cap.datetime DESC LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Aufnahmen gefunden")
+        
+        elif data_type == "Alle Adressen":
+            query = """
+            MATCH (a:Address)
+            RETURN a.full_address as Vollständige_Adresse, a.city as Stadt, 
+                   a.state as Bundesland, a.country as Land, a.postcode as PLZ
+            ORDER BY a.city, a.country LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Adressen gefunden")
+        
+        elif data_type == "Alle Tänze":
+            query = """
+            MATCH (d:Dance)
+            OPTIONAL MATCH (f:Face)-[r:PERFORMS]->(d)
+            RETURN d.label as Tanz_Art, count(r) as Anzahl_Ausführungen
+            ORDER BY count(r) DESC LIMIT $limit
+            """
+            result = neo.execute_cypher(query, {"limit": limit})
+            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+                df = pd.DataFrame(result)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("Keine Tänze gefunden")
+        
+        # Summary statistics
+        with st.expander("Zusammenfassung", expanded=False):
+            st.write("**Datenbank-Statistiken:**")
+            info = neo.get_database_info()
+            if "error" not in info:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Gesamt Knoten", sum(info.get("node_counts", {}).values()))
+                with col2:
+                    st.metric("Gesamt Beziehungen", sum(info.get("relationship_counts", {}).values()))
+                with col3:
+                    st.metric("Knotentypen", len(info.get("node_counts", {})))
 
     with tab_import:
         st.subheader("JSON-Import")
