@@ -1,169 +1,130 @@
 
-import io, json, tempfile, os
-from typing import List, Dict, Any
+import io
+import json
+import os
+import pandas as pd
 import streamlit as st
 
-import numpy as np
-from PIL import Image
-import cv2
+from typing import List, Dict, Any
 
-from app.face_recognizer import FaceEngine, GalleryDB
-from app.location import extract_exif_gps, reverse_geocode, extract_comprehensive_metadata, get_location_details
-from app.utils import parse_datetime_string, assess_image_quality, extract_color_histogram, analyze_image_composition
+from app.graph_persistence import Neo4jPersistence
 
-st.title("Annotate: Fotos analysieren")
-st.caption("Erweiterte Gesichtserkennung, Metadaten-Extraktion und Standortanalyse")
 
-# Benutzerführung
-with st.expander("Anleitung", expanded=False):
-    st.markdown("""
-    So verwenden Sie diese Seite:
-    
-    1. Bilder hochladen: Wählen Sie Bilder in der Sidebar aus
-    2. Einstellungen anpassen: Konfigurieren Sie die Erkennungsparameter
-    3. Verarbeitung: Die App analysiert automatisch alle Bilder
-    4. Download: Nach der Verarbeitung erscheint ein Download-Button am Ende
-    5. Analyse: Laden Sie die JSON-Datei in der 'Analyze'-Seite hoch
-    
-    Tipp: Der Download-Button erscheint erst nach der Verarbeitung aller Bilder!
-    """)
+st.title("Neo4j Graph-Datenbank")
+st.caption("Verbinden, importieren, abfragen und visualisieren")
 
+# Verbindung (Sidebar)
 with st.sidebar:
-    st.header("Einstellungen")
-    
-    # Gesichtserkennung
-    st.subheader("Gesichtserkennung")
-    det = st.slider("Detector size", 320, 1024, 640, 64, key="det_annot")
-    max_faces = st.slider("Max. Gesichter pro Bild", 1, 20, 10, 1)
-    min_det_score = st.slider("Min. Erkennungs-Score", 0.1, 1.0, 0.5, 0.05)
-    threshold = st.slider("Identity threshold (cosine)", 0.3, 0.9, 0.55, 0.01)
-    
-    # Metadaten
-    st.subheader("Metadaten")
-    extract_full_metadata = st.checkbox("Vollständige EXIF-Metadaten extrahieren", value=True)
-    do_reverse = st.checkbox("Reverse geocode GPS (Internet)", value=False)
-    show_location_details = st.checkbox("Detaillierte Standortinfos", value=False)
-    
-    # Qualitätsfilter
-    st.subheader("Qualitätsfilter")
-    min_quality = st.slider("Min. Gesichtsqualität", 0.0, 1.0, 0.3, 0.1)
-    min_face_size = st.slider("Min. Gesichtsgröße (Pixel)", 50, 200, 80, 10)
+    st.subheader("Verbindung")
+    with st.form("neo4j_connection_form", clear_on_submit=False):
+        uri = st.text_input("Bolt URI", value=st.session_state.get("neo4j_uri", "bolt://localhost:7687"))
+        user = st.text_input("User", value=st.session_state.get("neo4j_user", "neo4j"))
+        password = st.text_input("Passwort", type="password", value=st.session_state.get("neo4j_pwd", ""))
+        submitted = st.form_submit_button("Verbinden")
+        if submitted:
+            try:
+                neo = Neo4jPersistence(uri, user, password)
+                if neo.test_connection():
+                    st.session_state["neo4j_conn"] = neo
+                    st.session_state["neo4j_uri"] = uri
+                    st.session_state["neo4j_user"] = user
+                    st.session_state["neo4j_pwd"] = password
+                    st.success("Verbunden")
+                else:
+                    st.error("Verbindung fehlgeschlagen")
+            except Exception as e:
+                st.error(f"Fehler: {e}")
+    if st.button("Trennen"):
+        if st.session_state.get("neo4j_conn"):
+            try:
+                st.session_state["neo4j_conn"].close()
+            except Exception:
+                pass
+        st.session_state.pop("neo4j_conn", None)
+        st.success("Getrennt")
 
-    # Rendering
-    st.subheader("Darstellung")
-    draw_landmarks = st.checkbox("Landmarks einzeichnen", value=True)
-    draw_pose = st.checkbox("Pose anzeigen (Yaw/Pitch/Roll)", value=False)
-    blur_unknown = st.checkbox("Unbekannte Gesichter weichzeichnen", value=False)
-    show_json_each = st.checkbox("JSON pro Bild anzeigen", value=False)
 
-    # Personen & Tanz
-    st.subheader("Personen/Dance")
-    enable_dance = st.checkbox("Dance-Erkennung aktivieren (CLIP Zero-shot)", value=False)
-    dance_labels_text = st.text_input(
-        "Dance-Klassen (Kommagetrennt)",
-        value="ballet, hip hop, salsa, tango, waltz, breakdance, contemporary, flamenco, bharatanatyam, samba"
-    )
-    dance_use_face_crop = st.checkbox("Nur Gesichtsbereich (mit Rand) verwenden", value=True)
+connected = st.session_state.get("neo4j_conn") is not None
+st.info("Status: Verbunden" if connected else "Status: Nicht verbunden")
 
-    # Datum/Zeit
-    st.subheader("Datum/Zeit")
-    enrich_datetime = st.checkbox("Zeit-Features (Wochentag/Tagesteil) berechnen", value=True)
-    mtime_fallback = st.checkbox("Dateizeit als Fallback nutzen (falls Pfad verfügbar)", value=False)
+if connected:
+    neo: Neo4jPersistence = st.session_state["neo4j_conn"]
 
-    # Standort
-    st.subheader("Standort")
-    include_map_links = st.checkbox("Karten-Links in JSON aufnehmen", value=True)
+    tab_info, tab_import, tab_query, tab_vis, tab_admin = st.tabs([
+        "Datenbank-Info", "Import", "Abfragen", "Visualisierung", "Verwaltung"
+    ])
 
-    # Bild-Analyse
-    st.subheader("Bild-Analyse")
-    do_quality = st.checkbox("Bildqualitäts-Metriken berechnen", value=True)
-    do_color_hist = st.checkbox("Farb-Histogramme extrahieren", value=False)
-    do_composition = st.checkbox("Bildkomposition analysieren", value=False)
-    
-    # Datei-Upload
-    st.subheader("Dateien")
-    gallery_file = st.file_uploader("Embeddings DB (embeddings.pkl)", type=["pkl"], key="db_upload")
-    files = st.file_uploader("Bilder hochladen", type=["jpg","jpeg","png","bmp","webp","tif","tiff"], accept_multiple_files=True)
-
-if "engine_annot" not in st.session_state or st.session_state.get("det_annot_state") != det:
-    st.session_state["engine_annot"] = FaceEngine(det_size=(det, det))
-    st.session_state["det_annot_state"] = det
-
-db = None
-if gallery_file is not None:
-    import pickle
-    try:
-        db = GalleryDB()
-        data = pickle.load(gallery_file)
-        if isinstance(data, dict):
-            db.people = data.get('people', {})
-            db.face_metadata = data.get('metadata', {})
+    with tab_info:
+        st.subheader("Übersicht")
+        info = neo.get_database_info()
+        if "error" in info:
+            st.error(info["error"])
         else:
-            db.people = data
-        st.success(f"Embeddings geladen: {len(db.people)} Personen.")
-    except Exception as e:
-        st.error(f"Fehler beim Laden der Embeddings: {e}")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.write("Knoten pro Label")
+                st.dataframe(pd.DataFrame([{"label": k, "count": v} for k, v in info.get("node_counts", {}).items()]))
+            with c2:
+                st.write("Beziehungen pro Typ")
+                st.dataframe(pd.DataFrame([{"type": k, "count": v} for k, v in info.get("relationship_counts", {}).items()]))
 
-def draw_boxes(img_bgr, persons):
-    img = img_bgr.copy()
-    for p in persons:
-        x1,y1,x2,y2 = map(int, p["bbox"])
-        
-        # Farbe basierend auf Qualität
-        quality = p.get('quality_score', 0.5)
-        if quality > 0.7:
-            color = (0, 255, 0)  # Grün für hohe Qualität
-        elif quality > 0.4:
-            color = (0, 255, 255)  # Gelb für mittlere Qualität
+    with tab_import:
+        st.subheader("JSON-Import")
+        up = st.file_uploader("Annotations-JSON hochladen (Liste von Records)", type=["json"])
+        if up is not None:
+            try:
+                data = json.load(up)
+                if isinstance(data, dict):
+                    data = data.get("records") or data.get("results") or []
+                if not isinstance(data, list):
+                    st.error("Unerwartetes JSON-Format. Erwartet: Liste von Objekten.")
+                else:
+                    neo.init_constraints()
+                    neo.upsert_annotations(data)
+                    st.success(f"{len(data)} Datensätze importiert")
+            except Exception as e:
+                st.error(f"Fehler beim Import: {e}")
+
+    with tab_query:
+        st.subheader("Cypher ausführen")
+        q = st.text_area("Cypher", value="MATCH (n) RETURN labels(n) AS labels, count(n) AS cnt ORDER BY cnt DESC")
+        if st.button("Query ausführen"):
+            res = neo.execute_cypher(q)
+            try:
+                st.dataframe(pd.DataFrame(res))
+            except Exception:
+                st.json(res)
+
+    with tab_vis:
+        st.subheader("Graph-Visualisierung (vereinfachte Ansicht)")
+        limit = st.slider("Limit", 100, 5000, 500, 100)
+        data = neo.get_graph_data(limit=limit)
+        if "error" in data:
+            st.error(data["error"])
         else:
-            color = (0, 0, 255)  # Rot für niedrige Qualität
-        
-        cv2.rectangle(img, (x1,y1), (x2,y2), color, 2)
-        
-        # Label mit erweiterten Informationen
-        label_parts = []
-        
-        # Name und Ähnlichkeit
-        if p.get("name"):
-            sim = f" ({p['similarity']:.2f})" if p.get("similarity") is not None else ""
-            label_parts.append(p["name"] + sim)
-        
-        # Demografie
-        if p.get("gender"):
-            label_parts.append(p["gender"])
-        if p.get("age") is not None:
-            label_parts.append(f"{p['age']}J")
-        
-        # Qualität
-        if p.get("quality_score"):
-            label_parts.append(f"Q:{p['quality_score']:.2f}")
-        
-        # Emotion
-        if p.get("emotion"):
-            label_parts.append(p["emotion"])
-        
-        # Augen/Mund Status
-        status_parts = []
-        if p.get("eye_status"):
-            status_parts.append(f"Augen:{p['eye_status']}")
-        if p.get("mouth_status"):
-            status_parts.append(f"Mund:{p['mouth_status']}")
-        
-        if status_parts:
-            label_parts.append(" ".join(status_parts))
+            st.caption(f"Nodes: {len(data.get('nodes', []))}, Relationships: {len(data.get('relationships', []))}")
+            st.json(data)
 
-        # Dance
-        if p.get("dance"):
-            label_parts.append(f"Dance:{p['dance']}")
-        
-        txt = " | ".join(label_parts) if label_parts else f"{p.get('prob', 1.0):.2f}"
-        
-        # Text-Hintergrund für bessere Lesbarkeit
-        (text_width, text_height), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-        cv2.rectangle(img, (x1, max(0,y1-text_height-8)), (x1+text_width, y1), color, -1)
-        cv2.putText(img, txt, (x1, max(0,y1-8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, cv2.LINE_AA)
-    
-    return img
+    with tab_admin:
+        st.subheader("Verwaltung")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Graph als JSON exportieren"):
+                import tempfile
+                tmp = tempfile.mktemp(suffix=".json")
+                if neo.export_to_json(tmp):
+                    with open(tmp, "rb") as f:
+                        st.download_button("Download JSON", data=f.read(), file_name="graph.json", mime="application/json")
+                else:
+                    st.error("Export fehlgeschlagen")
+        with c2:
+            if st.button("Datenbank leeren (ALLE Daten)"):
+                if neo.clear_database():
+                    st.warning("Alle Daten wurden gelöscht.")
+                else:
+                    st.error("Löschen fehlgeschlagen")
+else:
+    st.info("Bitte zuerst verbinden, um Funktionen anzuzeigen.")
 
 
 @st.cache_resource(show_spinner=False)
