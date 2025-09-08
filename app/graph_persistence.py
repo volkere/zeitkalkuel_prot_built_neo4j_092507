@@ -417,12 +417,18 @@ class Neo4jPersistence:
             g = Graph()
             SCHEMA = Namespace("http://schema.org/")
             GEO = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
+            EXIF = Namespace("http://www.w3.org/2003/12/exif/ns#")
+            IPTC = Namespace("http://iptc.org/std/photometadata/2008-02-29/")
+            PROV = Namespace("http://www.w3.org/ns/prov#")
             ZK = Namespace(base_uri)
             g.bind("schema", SCHEMA)
             g.bind("geo", GEO)
             g.bind("foaf", FOAF)
             g.bind("dcterms", DCTERMS)
             g.bind("zk", ZK)
+            g.bind("exif", EXIF)
+            g.bind("iptc", IPTC)
+            g.bind("prov", PROV)
 
             # Build index of node id → uri and store label for typing
             id_to_uri: Dict[int, URIRef] = {}
@@ -442,6 +448,14 @@ class Neo4jPersistence:
                     g.add((uri, RDF.type, SCHEMA.ImageObject))
                     if props.get("name"):
                         g.add((uri, DCTERMS.title, Literal(props["name"])) )
+                    # EXIF/ IPTC mappings (best-effort)
+                    for k in ("camera_make","camera_model"):
+                        if props.get(k):
+                            g.add((uri, EXIF[k.replace("camera_","")], Literal(props[k])))
+                    if props.get("lens"):
+                        g.add((uri, EXIF.lens, Literal(props["lens"])))
+                    if props.get("datetime"):
+                        g.add((uri, EXIF.dateTimeOriginal, Literal(props["datetime"])))
                 if "Person" in labels:
                     g.add((uri, RDF.type, FOAF.Person))
                     if props.get("name"):
@@ -458,6 +472,8 @@ class Neo4jPersistence:
                     g.add((uri, RDF.type, SCHEMA.Event))
                     if props.get("datetime"):
                         g.add((uri, SCHEMA.startDate, Literal(props["datetime"], datatype=XSD.dateTime)))
+                    # provenance
+                    g.add((uri, PROV.generatedAtTime, Literal(props.get("datetime") or "")))
                 if "Address" in labels:
                     g.add((uri, RDF.type, SCHEMA.PostalAddress))
                     for p in ["full_address","country","state","city","postcode"]:
