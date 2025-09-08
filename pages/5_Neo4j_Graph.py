@@ -88,29 +88,74 @@ if connected:
         # Limit selector
         limit = st.slider("Anzahl Einträge", 10, 1000, 100, 10)
         
+        # Test visualization
+        if st.button("Test-Visualisierung anzeigen"):
+            st.write("**Test-Diagramm:**")
+            test_data = {"Name": ["Alice", "Bob", "Charlie"], "Count": [1, 2, 3]}
+            fig = px.bar(x=test_data["Name"], y=test_data["Count"], title="Test-Diagramm")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.write("**Test-Netzwerk:**")
+            test_network = {
+                "nodes": [
+                    {"id": "test1", "labels": ["Person"], "properties": {"name": "Test Person 1"}},
+                    {"id": "test2", "labels": ["Person"], "properties": {"name": "Test Person 2"}}
+                ],
+                "relationships": [
+                    {"source": "test1", "target": "test2", "type": "KNOWS"}
+                ]
+            }
+            gv = GraphVisualizer(height="400px")
+            html_body = gv.create_interactive_network(test_network, "Test-Netzwerk")
+            if html_body:
+                st_html(html_body, height=420)
+            else:
+                st.error("Test-Netzwerk konnte nicht generiert werden")
+        
         if data_type == "Alle Personen":
             query = "MATCH (p:Person) RETURN p.name as Name, p ORDER BY p.name LIMIT $limit"
             result = neo.execute_cypher(query, {"limit": limit})
-            if result and not (isinstance(result[0], dict) and "error" in result[0]):
+            
+            # Debug information
+            st.write(f"**Debug:** Query: {query}")
+            st.write(f"**Debug:** Result type: {type(result)}, Length: {len(result) if result else 0}")
+            if result:
+                st.write(f"**Debug:** First result: {result[0] if result else 'None'}")
+            
+            if result and len(result) > 0 and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame([{"Name": r.get("Name", "Unbekannt")} for r in result])
+                st.write(f"**Debug:** DataFrame created with {len(df)} rows")
                 
                 if view_type == "Tabellen":
                     st.dataframe(df, use_container_width=True)
                 elif view_type == "Diagramme":
                     # Person count chart
-                    fig = px.bar(df, x="Name", y=[1]*len(df), title="Personen in der Datenbank")
-                    fig.update_layout(showlegend=False, yaxis_title="Anzahl")
-                    st.plotly_chart(fig, use_container_width=True)
+                    if len(df) > 0:
+                        fig = px.bar(df, x="Name", y=[1]*len(df), title="Personen in der Datenbank")
+                        fig.update_layout(showlegend=False, yaxis_title="Anzahl")
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.warning("Keine Daten für Diagramm verfügbar")
                 elif view_type == "Interaktive Graphen":
                     # Create a simple network for persons
-                    person_data = {"nodes": [{"id": name, "labels": ["Person"], "properties": {"name": name}} for name in df["Name"]], "relationships": []}
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(person_data, "Personen-Netzwerk")
-                    st_html(html_body, height=520)
+                    if len(df) > 0:
+                        person_data = {"nodes": [{"id": name, "labels": ["Person"], "properties": {"name": name}} for name in df["Name"]], "relationships": []}
+                        st.write(f"**Debug:** Created network with {len(person_data['nodes'])} nodes")
+                        gv = GraphVisualizer(height="500px")
+                        html_body = gv.create_interactive_network(person_data, "Personen-Netzwerk")
+                        if html_body:
+                            st_html(html_body, height=520)
+                        else:
+                            st.error("Fehler beim Generieren der Netzwerk-Visualisierung")
+                    else:
+                        st.warning("Keine Daten für Netzwerk verfügbar")
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Personen")
             else:
-                st.info("Keine Personen gefunden")
+                if result and len(result) > 0 and isinstance(result[0], dict) and "error" in result[0]:
+                    st.error(f"Query-Fehler: {result[0]['error']}")
+                else:
+                    st.info("Keine Personen gefunden")
         
         elif data_type == "Alle Bilder":
             query = """
