@@ -4,6 +4,9 @@ import json
 import os
 import pandas as pd
 import streamlit as st
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from typing import List, Dict, Any
 from streamlit.components.v1 import html as st_html
@@ -73,6 +76,9 @@ if connected:
     with tab_data:
         st.subheader("Daten-View")
         
+        # View type selector
+        view_type = st.radio("Ansicht:", ["Tabellen", "Karten", "Diagramme", "Interaktive Graphen"], horizontal=True)
+        
         # Data type selector
         data_type = st.selectbox("Datentyp anzeigen:", [
             "Alle Personen", "Alle Bilder", "Alle Standorte", "Alle Gesichter", 
@@ -87,7 +93,22 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame([{"Name": r.get("Name", "Unbekannt")} for r in result])
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Diagramme":
+                    # Person count chart
+                    fig = px.bar(df, x="Name", y=[1]*len(df), title="Personen in der Datenbank")
+                    fig.update_layout(showlegend=False, yaxis_title="Anzahl")
+                    st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create a simple network for persons
+                    person_data = {"nodes": [{"id": name, "labels": ["Person"], "properties": {"name": name}} for name in df["Name"]], "relationships": []}
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(person_data, "Personen-Netzwerk")
+                    st_html(html_body, height=520)
+                else:
+                    st.info("Karten-Ansicht nicht verfügbar für Personen")
             else:
                 st.info("Keine Personen gefunden")
         
@@ -104,7 +125,57 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Karten":
+                    # Filter out images without coordinates
+                    df_map = df.dropna(subset=['Breitengrad', 'Längengrad'])
+                    if not df_map.empty:
+                        fig = px.scatter_mapbox(
+                            df_map, 
+                            lat="Breitengrad", 
+                            lon="Längengrad",
+                            hover_name="Bildname",
+                            hover_data=["Breite", "Höhe", "Kamera_Hersteller", "Kamera_Modell"],
+                            color="Kamera_Hersteller",
+                            size_max=15,
+                            zoom=1,
+                            title="Bilder auf der Karte"
+                        )
+                        fig.update_layout(
+                            mapbox_style="open-street-map",
+                            height=600,
+                            margin={"r":0,"t":30,"l":0,"b":0}
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.warning("Keine Bilder mit GPS-Koordinaten gefunden")
+                elif view_type == "Diagramme":
+                    # Resolution distribution
+                    if 'Breite' in df.columns and 'Höhe' in df.columns:
+                        df_res = df.dropna(subset=['Breite', 'Höhe'])
+                        if not df_res.empty:
+                            df_res['Auflösung'] = df_res['Breite'].astype(str) + 'x' + df_res['Höhe'].astype(str)
+                            res_counts = df_res['Auflösung'].value_counts().head(10)
+                            fig = px.bar(x=res_counts.index, y=res_counts.values, title="Häufigste Auflösungen")
+                            fig.update_layout(xaxis_title="Auflösung", yaxis_title="Anzahl", xaxis_tickangle=-45)
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Camera manufacturer distribution
+                    if 'Kamera_Hersteller' in df.columns:
+                        cam_counts = df['Kamera_Hersteller'].value_counts()
+                        fig = px.pie(values=cam_counts.values, names=cam_counts.index, title="Kamera-Hersteller Verteilung")
+                        st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create image network
+                    image_data = {
+                        "nodes": [{"id": f"img_{i}", "labels": ["Image"], "properties": {"name": row.get("Bildname"), "width": row.get("Breite"), "height": row.get("Höhe")}} for i, row in df.iterrows()],
+                        "relationships": []
+                    }
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(image_data, "Bilder-Netzwerk")
+                    st_html(html_body, height=520)
             else:
                 st.info("Keine Bilder gefunden")
         
@@ -119,7 +190,54 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Karten":
+                    # Filter out locations without coordinates
+                    df_map = df.dropna(subset=['Breitengrad', 'Längengrad'])
+                    if not df_map.empty:
+                        fig = px.scatter_mapbox(
+                            df_map, 
+                            lat="Breitengrad", 
+                            lon="Längengrad",
+                            hover_name="Stadt",
+                            hover_data=["Adresse", "Land", "Höhe"],
+                            color="Land",
+                            size_max=15,
+                            zoom=1,
+                            title="Standorte auf der Karte"
+                        )
+                        fig.update_layout(
+                            mapbox_style="open-street-map",
+                            height=600,
+                            margin={"r":0,"t":30,"l":0,"b":0}
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.warning("Keine Standorte mit GPS-Koordinaten gefunden")
+                elif view_type == "Diagramme":
+                    # Country distribution
+                    if 'Land' in df.columns:
+                        country_counts = df['Land'].value_counts().head(10)
+                        fig = px.pie(values=country_counts.values, names=country_counts.index, title="Verteilung nach Ländern")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Altitude distribution
+                    if 'Höhe' in df.columns:
+                        df_alt = df.dropna(subset=['Höhe'])
+                        if not df_alt.empty:
+                            fig = px.histogram(df_alt, x="Höhe", title="Höhenverteilung", nbins=20)
+                            st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create location network
+                    location_data = {
+                        "nodes": [{"id": f"loc_{i}", "labels": ["Location"], "properties": {"lat": row.get("Breitengrad"), "lon": row.get("Längengrad"), "city": row.get("Stadt")}} for i, row in df.iterrows()],
+                        "relationships": []
+                    }
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(location_data, "Standorte-Netzwerk")
+                    st_html(html_body, height=520)
             else:
                 st.info("Keine Standorte gefunden")
         
@@ -135,7 +253,64 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Diagramme":
+                    # Emotion distribution
+                    if 'Emotion' in df.columns:
+                        emotion_counts = df['Emotion'].value_counts()
+                        fig = px.pie(values=emotion_counts.values, names=emotion_counts.index, title="Emotionsverteilung")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Quality distribution
+                    if 'Qualität' in df.columns:
+                        df_qual = df.dropna(subset=['Qualität'])
+                        if not df_qual.empty:
+                            fig = px.histogram(df_qual, x="Qualität", title="Qualitätsverteilung", nbins=20)
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Person vs Emotion heatmap
+                    if 'Person' in df.columns and 'Emotion' in df.columns:
+                        df_heat = df.dropna(subset=['Person', 'Emotion'])
+                        if not df_heat.empty:
+                            heatmap_data = df_heat.groupby(['Person', 'Emotion']).size().unstack(fill_value=0)
+                            fig = px.imshow(heatmap_data, title="Personen vs Emotionen", aspect="auto")
+                            st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create face network with relationships
+                    face_data = {
+                        "nodes": [],
+                        "relationships": []
+                    }
+                    
+                    # Add faces and persons
+                    for i, row in df.iterrows():
+                        face_id = f"face_{i}"
+                        face_data["nodes"].append({
+                            "id": face_id,
+                            "labels": ["Face"],
+                            "properties": {"emotion": row.get("Emotion"), "quality": row.get("Qualität")}
+                        })
+                        
+                        if row.get("Person"):
+                            person_id = f"person_{row['Person']}"
+                            face_data["nodes"].append({
+                                "id": person_id,
+                                "labels": ["Person"],
+                                "properties": {"name": row["Person"]}
+                            })
+                            face_data["relationships"].append({
+                                "source": face_id,
+                                "target": person_id,
+                                "type": "IDENTIFIED_AS"
+                            })
+                    
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(face_data, "Gesichter-Netzwerk")
+                    st_html(html_body, height=520)
+                else:
+                    st.info("Karten-Ansicht nicht verfügbar für Gesichter")
             else:
                 st.info("Keine Gesichter gefunden")
         
@@ -148,7 +323,33 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Diagramme":
+                    # Camera manufacturer distribution
+                    if 'Hersteller' in df.columns:
+                        make_counts = df['Hersteller'].value_counts()
+                        fig = px.bar(x=make_counts.index, y=make_counts.values, title="Kamera-Hersteller Verteilung")
+                        fig.update_layout(xaxis_title="Hersteller", yaxis_title="Anzahl")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Lens distribution
+                    if 'Objektiv' in df.columns:
+                        lens_counts = df['Objektiv'].value_counts().head(10)
+                        fig = px.pie(values=lens_counts.values, names=lens_counts.index, title="Objektiv-Verteilung")
+                        st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create camera network
+                    camera_data = {
+                        "nodes": [{"id": f"cam_{i}", "labels": ["Camera"], "properties": {"make": row.get("Hersteller"), "model": row.get("Modell"), "lens": row.get("Objektiv")}} for i, row in df.iterrows()],
+                        "relationships": []
+                    }
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(camera_data, "Kamera-Netzwerk")
+                    st_html(html_body, height=520)
+                else:
+                    st.info("Karten-Ansicht nicht verfügbar für Kameras")
             else:
                 st.info("Keine Kameras gefunden")
         
@@ -162,7 +363,40 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Diagramme":
+                    # Hour distribution
+                    if 'Stunde' in df.columns:
+                        hour_counts = df['Stunde'].value_counts().sort_index()
+                        fig = px.bar(x=hour_counts.index, y=hour_counts.values, title="Aufnahmen nach Stunde")
+                        fig.update_layout(xaxis_title="Stunde", yaxis_title="Anzahl")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Weekday distribution
+                    if 'Wochentag' in df.columns:
+                        weekday_counts = df['Wochentag'].value_counts()
+                        fig = px.pie(values=weekday_counts.values, names=weekday_counts.index, title="Aufnahmen nach Wochentag")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Time of day distribution
+                    if 'Tageszeit' in df.columns:
+                        time_counts = df['Tageszeit'].value_counts()
+                        fig = px.bar(x=time_counts.index, y=time_counts.values, title="Aufnahmen nach Tageszeit")
+                        fig.update_layout(xaxis_title="Tageszeit", yaxis_title="Anzahl")
+                        st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create capture network
+                    capture_data = {
+                        "nodes": [{"id": f"cap_{i}", "labels": ["Capture"], "properties": {"datetime": row.get("Datum_Zeit"), "hour": row.get("Stunde"), "weekday": row.get("Wochentag")}} for i, row in df.iterrows()],
+                        "relationships": []
+                    }
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(capture_data, "Aufnahmen-Netzwerk")
+                    st_html(html_body, height=520)
+                else:
+                    st.info("Karten-Ansicht nicht verfügbar für Aufnahmen")
             else:
                 st.info("Keine Aufnahmen gefunden")
         
@@ -176,7 +410,33 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Diagramme":
+                    # Country distribution
+                    if 'Land' in df.columns:
+                        country_counts = df['Land'].value_counts()
+                        fig = px.pie(values=country_counts.values, names=country_counts.index, title="Adressen nach Ländern")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # City distribution
+                    if 'Stadt' in df.columns:
+                        city_counts = df['Stadt'].value_counts().head(15)
+                        fig = px.bar(x=city_counts.index, y=city_counts.values, title="Top 15 Städte")
+                        fig.update_layout(xaxis_title="Stadt", yaxis_title="Anzahl", xaxis_tickangle=-45)
+                        st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create address network
+                    address_data = {
+                        "nodes": [{"id": f"addr_{i}", "labels": ["Address"], "properties": {"city": row.get("Stadt"), "country": row.get("Land"), "state": row.get("Bundesland")}} for i, row in df.iterrows()],
+                        "relationships": []
+                    }
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(address_data, "Adressen-Netzwerk")
+                    st_html(html_body, height=520)
+                else:
+                    st.info("Karten-Ansicht nicht verfügbar für Adressen")
             else:
                 st.info("Keine Adressen gefunden")
         
@@ -190,7 +450,30 @@ if connected:
             result = neo.execute_cypher(query, {"limit": limit})
             if result and not (isinstance(result[0], dict) and "error" in result[0]):
                 df = pd.DataFrame(result)
-                st.dataframe(df, use_container_width=True)
+                
+                if view_type == "Tabellen":
+                    st.dataframe(df, use_container_width=True)
+                elif view_type == "Diagramme":
+                    # Dance type distribution
+                    if 'Tanz_Art' in df.columns and 'Anzahl_Ausführungen' in df.columns:
+                        fig = px.bar(df, x="Tanz_Art", y="Anzahl_Ausführungen", title="Tanz-Ausführungen")
+                        fig.update_layout(xaxis_title="Tanz-Art", yaxis_title="Anzahl Ausführungen", xaxis_tickangle=-45)
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Pie chart for dance types
+                        fig = px.pie(df, values="Anzahl_Ausführungen", names="Tanz_Art", title="Verteilung der Tanz-Arten")
+                        st.plotly_chart(fig, use_container_width=True)
+                elif view_type == "Interaktive Graphen":
+                    # Create dance network
+                    dance_data = {
+                        "nodes": [{"id": f"dance_{i}", "labels": ["Dance"], "properties": {"label": row.get("Tanz_Art"), "count": row.get("Anzahl_Ausführungen")}} for i, row in df.iterrows()],
+                        "relationships": []
+                    }
+                    gv = GraphVisualizer(height="500px")
+                    html_body = gv.create_interactive_network(dance_data, "Tanz-Netzwerk")
+                    st_html(html_body, height=520)
+                else:
+                    st.info("Karten-Ansicht nicht verfügbar für Tänze")
             else:
                 st.info("Keine Tänze gefunden")
         
