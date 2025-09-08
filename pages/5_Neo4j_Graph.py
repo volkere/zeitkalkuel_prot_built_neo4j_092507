@@ -137,16 +137,16 @@ if connected:
                     else:
                         st.warning("Keine Daten für Diagramm verfügbar")
                 elif view_type == "Interaktive Graphen":
-                    # Create a simple network for persons
-                    if len(df) > 0:
-                        person_data = {"nodes": [{"id": name, "labels": ["Person"], "properties": {"name": name}} for name in df["Name"]], "relationships": []}
-                        st.write(f"**Debug:** Created network with {len(person_data['nodes'])} nodes")
-                        gv = GraphVisualizer(height="500px")
-                        html_body = gv.create_interactive_network(person_data, "Personen-Netzwerk")
-                        if html_body:
-                            st_html(html_body, height=520)
-                        else:
-                            st.error("Fehler beim Generieren der Netzwerk-Visualisierung")
+                    # Use real subgraph with relationships
+                    sub = neo.get_subgraph_by_label("Person", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Personen gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Personen-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
                     else:
                         st.warning("Keine Daten für Netzwerk verfügbar")
                 else:
@@ -213,14 +213,15 @@ if connected:
                         fig = px.pie(values=cam_counts.values, names=cam_counts.index, title="Kamera-Hersteller Verteilung")
                         st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create image network
-                    image_data = {
-                        "nodes": [{"id": f"img_{i}", "labels": ["Image"], "properties": {"name": row.get("Bildname"), "width": row.get("Breite"), "height": row.get("Höhe")}} for i, row in df.iterrows()],
-                        "relationships": []
-                    }
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(image_data, "Bilder-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Image", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Bilder gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Bilder-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
             else:
                 st.info("Keine Bilder gefunden")
         
@@ -275,14 +276,15 @@ if connected:
                             fig = px.histogram(df_alt, x="Höhe", title="Höhenverteilung", nbins=20)
                             st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create location network
-                    location_data = {
-                        "nodes": [{"id": f"loc_{i}", "labels": ["Location"], "properties": {"lat": row.get("Breitengrad"), "lon": row.get("Längengrad"), "city": row.get("Stadt")}} for i, row in df.iterrows()],
-                        "relationships": []
-                    }
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(location_data, "Standorte-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Location", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Standorte gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Standorte-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
             else:
                 st.info("Keine Standorte gefunden")
         
@@ -323,37 +325,15 @@ if connected:
                             fig = px.imshow(heatmap_data, title="Personen vs Emotionen", aspect="auto")
                             st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create face network with relationships
-                    face_data = {
-                        "nodes": [],
-                        "relationships": []
-                    }
-                    
-                    # Add faces and persons
-                    for i, row in df.iterrows():
-                        face_id = f"face_{i}"
-                        face_data["nodes"].append({
-                            "id": face_id,
-                            "labels": ["Face"],
-                            "properties": {"emotion": row.get("Emotion"), "quality": row.get("Qualität")}
-                        })
-                        
-                        if row.get("Person"):
-                            person_id = f"person_{row['Person']}"
-                            face_data["nodes"].append({
-                                "id": person_id,
-                                "labels": ["Person"],
-                                "properties": {"name": row["Person"]}
-                            })
-                            face_data["relationships"].append({
-                                "source": face_id,
-                                "target": person_id,
-                                "type": "IDENTIFIED_AS"
-                            })
-                    
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(face_data, "Gesichter-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Face", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Gesichter gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Gesichter-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Gesichter")
             else:
@@ -385,14 +365,15 @@ if connected:
                         fig = px.pie(values=lens_counts.values, names=lens_counts.index, title="Objektiv-Verteilung")
                         st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create camera network
-                    camera_data = {
-                        "nodes": [{"id": f"cam_{i}", "labels": ["Camera"], "properties": {"make": row.get("Hersteller"), "model": row.get("Modell"), "lens": row.get("Objektiv")}} for i, row in df.iterrows()],
-                        "relationships": []
-                    }
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(camera_data, "Kamera-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Camera", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Kameras gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Kamera-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Kameras")
             else:
@@ -432,14 +413,15 @@ if connected:
                         fig.update_layout(xaxis_title="Tageszeit", yaxis_title="Anzahl")
                         st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create capture network
-                    capture_data = {
-                        "nodes": [{"id": f"cap_{i}", "labels": ["Capture"], "properties": {"datetime": row.get("Datum_Zeit"), "hour": row.get("Stunde"), "weekday": row.get("Wochentag")}} for i, row in df.iterrows()],
-                        "relationships": []
-                    }
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(capture_data, "Aufnahmen-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Capture", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Aufnahmen gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Aufnahmen-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Aufnahmen")
             else:
@@ -472,14 +454,15 @@ if connected:
                         fig.update_layout(xaxis_title="Stadt", yaxis_title="Anzahl", xaxis_tickangle=-45)
                         st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create address network
-                    address_data = {
-                        "nodes": [{"id": f"addr_{i}", "labels": ["Address"], "properties": {"city": row.get("Stadt"), "country": row.get("Land"), "state": row.get("Bundesland")}} for i, row in df.iterrows()],
-                        "relationships": []
-                    }
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(address_data, "Adressen-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Address", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Adressen gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Adressen-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Adressen")
             else:
@@ -509,14 +492,15 @@ if connected:
                         fig = px.pie(df, values="Anzahl_Ausführungen", names="Tanz_Art", title="Verteilung der Tanz-Arten")
                         st.plotly_chart(fig, use_container_width=True)
                 elif view_type == "Interaktive Graphen":
-                    # Create dance network
-                    dance_data = {
-                        "nodes": [{"id": f"dance_{i}", "labels": ["Dance"], "properties": {"label": row.get("Tanz_Art"), "count": row.get("Anzahl_Ausführungen")}} for i, row in df.iterrows()],
-                        "relationships": []
-                    }
-                    gv = GraphVisualizer(height="500px")
-                    html_body = gv.create_interactive_network(dance_data, "Tanz-Netzwerk")
-                    st_html(html_body, height=520)
+                    sub = neo.get_subgraph_by_label("Dance", node_limit=limit)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    elif not sub.get("nodes"):
+                        st.info("Kein Subgraph für Tänze gefunden")
+                    else:
+                        gv = GraphVisualizer(height="650px")
+                        html_body = gv.create_interactive_network(sub, "Tanz-Subgraph", show_edge_labels=True)
+                        st_html(html_body, height=680)
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Tänze")
             else:

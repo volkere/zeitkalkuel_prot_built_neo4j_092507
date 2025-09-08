@@ -453,6 +453,28 @@ class Neo4jPersistence:
         except Exception as e:
             return False
 
+    def get_subgraph_by_label(self, label: str, node_limit: int = 200) -> Dict[str, Any]:
+        """Get a connected subgraph for nodes with a given label and their 1-hop neighbors.
+
+        Returns nodes with ids/labels/properties and relationships with source/target/type/properties.
+        """
+        try:
+            with self._driver.session() as session:
+                query = f"""
+                MATCH (n:`{label}`)
+                WITH n LIMIT $node_limit
+                MATCH (n)-[r]-(m)
+                WITH collect(DISTINCT n) + collect(DISTINCT m) AS nodes, collect(DISTINCT r) AS rels
+                RETURN [x IN nodes | {id:id(x), labels:labels(x), properties:properties(x)}] AS nodes,
+                       [r IN rels  | {source:id(startNode(r)), target:id(endNode(r)), type:type(r), properties:properties(r)}] AS relationships
+                """
+                rec = session.run(query, {"node_limit": node_limit}).single()
+                if not rec:
+                    return {"nodes": [], "relationships": []}
+                return {"nodes": rec["nodes"] or [], "relationships": rec["relationships"] or []}
+        except Exception as e:
+            return {"error": str(e)}
+
     # ------------------------- Linked Open Data (RDF) -------------------------
     def export_rdf(self, output_file: str, fmt: str = "turtle", base_uri: str = "http://localhost:8000/zeitkalkuel/") -> bool:
         """Export the Neo4j graph as RDF (JSON-LD/Turtle) using simple ontology mappings.
