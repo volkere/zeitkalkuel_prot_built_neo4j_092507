@@ -7,6 +7,8 @@ from pyvis.network import Network
 import json
 import io
 import base64
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 
 class GraphVisualizer:
@@ -224,14 +226,21 @@ class GraphVisualizer:
             pass
         
         # Generate HTML
-        html = net.generate_html()
-        
-        # Extract just the body content for embedding
-        start = html.find('<body>') + 6
-        end = html.find('</body>')
-        body_content = html[start:end]
-        
-        return body_content
+        try:
+            html = net.generate_html()
+            
+            # Extract just the body content for embedding
+            start = html.find('<body>') + 6
+            end = html.find('</body>')
+            if start > 5 and end > start:
+                body_content = html[start:end]
+                return body_content
+            else:
+                # Fallback: return full HTML if body extraction fails
+                return html
+        except Exception as e:
+            # Return error message as HTML
+            return f'<div style="color: red; padding: 20px;">Fehler bei der Visualisierung: {str(e)}</div>'
     
     def create_person_network(self, person_data: Dict[str, Any], 
                             person_name: str) -> str:
@@ -340,3 +349,94 @@ class GraphVisualizer:
             "density": density,
             "avg_degree": (2 * n_edges) / n_nodes if n_nodes > 0 else 0
         }
+    
+    def create_static_network(self, graph_data: Dict[str, Any], title: str = "Neo4j Graph") -> str:
+        """Create a static network visualization using matplotlib."""
+        try:
+            # Create NetworkX graph
+            G = nx.DiGraph()
+            
+            # Add nodes
+            for node in graph_data.get("nodes", []):
+                node_id = node["id"]
+                labels = node["labels"]
+                G.add_node(node_id, labels=labels, properties=node["properties"])
+            
+            # Add edges
+            for rel in graph_data.get("relationships", []):
+                G.add_edge(rel["source"], rel["target"], type=rel["type"])
+            
+            if len(G.nodes()) == 0:
+                return "Keine Knoten zum Visualisieren gefunden."
+            
+            # Create figure
+            plt.figure(figsize=(12, 8))
+            
+            # Layout
+            if len(G.nodes()) > 100:
+                pos = nx.spring_layout(G, k=1, iterations=50)
+            else:
+                pos = nx.spring_layout(G, k=2, iterations=100)
+            
+            # Color mapping
+            node_colors = {
+                "Person": "#ff6b6b",
+                "Image": "#4ecdc4", 
+                "Location": "#45b7d1",
+                "Face": "#f9ca24",
+                "Camera": "#6c5ce7",
+                "Tech": "#a29bfe",
+                "Capture": "#fd79a8",
+                "ImageAnalysis": "#fdcb6e",
+                "Address": "#e17055",
+                "Dance": "#00b894"
+            }
+            
+            # Draw nodes
+            node_colors_list = []
+            for node in G.nodes():
+                labels = G.nodes[node].get("labels", [])
+                color = "#95a5a6"  # default gray
+                for label in labels:
+                    if label in node_colors:
+                        color = node_colors[label]
+                        break
+                node_colors_list.append(color)
+            
+            nx.draw_networkx_nodes(G, pos, node_color=node_colors_list, node_size=300, alpha=0.7)
+            nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True, arrowsize=20, alpha=0.6)
+            
+            # Add labels for small graphs
+            if len(G.nodes()) <= 50:
+                labels = {}
+                for node in G.nodes():
+                    props = G.nodes[node].get("properties", {})
+                    node_labels = G.nodes[node].get("labels", [])
+                    if "Person" in node_labels and props.get("name"):
+                        labels[node] = props["name"][:10]
+                    elif "Image" in node_labels and props.get("name"):
+                        labels[node] = props["name"][:10]
+                    else:
+                        labels[node] = str(node)
+                nx.draw_networkx_labels(G, pos, labels, font_size=8)
+            
+            plt.title(f"{title} ({len(G.nodes())} Knoten, {len(G.edges())} Kanten)")
+            plt.axis('off')
+            
+            # Create legend
+            legend_elements = []
+            for label, color in node_colors.items():
+                legend_elements.append(mpatches.Patch(color=color, label=label))
+            plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
+            
+            # Convert to base64 string
+            img_buffer = io.BytesIO()
+            plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
+            img_buffer.seek(0)
+            img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+            plt.close()
+            
+            return f'<img src="data:image/png;base64,{img_base64}" style="width: 100%; max-width: 1000px;">'
+            
+        except Exception as e:
+            return f'<div style="color: red; padding: 20px;">Fehler bei der statischen Visualisierung: {str(e)}</div>'

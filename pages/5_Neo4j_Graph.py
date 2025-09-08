@@ -100,26 +100,55 @@ if connected:
     with tab_vis:
         st.subheader("Graph-Visualisierung")
         limit = st.slider("Limit", 100, 10000, 2000, 100)
-        show_buttons = st.checkbox("Steuerung anzeigen (Physik/Nodes/Edges)", True)
-        physics = st.checkbox("Physik aktiv", True)
-        scale_cent = st.checkbox("Größe nach Zentralität", True)
-        min_deg = st.slider("Minimaler Knotengrad (Filter)", 0, 5, 0)
-        show_edge_labels = st.checkbox("Kanten-Labels anzeigen", True)
+        viz_type = st.radio("Visualisierungstyp", ["Interaktiv (pyvis)", "Statisch (matplotlib)"], index=0)
+        
+        if viz_type == "Interaktiv (pyvis)":
+            show_buttons = st.checkbox("Steuerung anzeigen (Physik/Nodes/Edges)", True)
+            physics = st.checkbox("Physik aktiv", True)
+            scale_cent = st.checkbox("Größe nach Zentralität", True)
+            min_deg = st.slider("Minimaler Knotengrad (Filter)", 0, 5, 0)
+            show_edge_labels = st.checkbox("Kanten-Labels anzeigen", True)
 
         data = neo.get_graph_data(limit=limit)
         if "error" in data:
             st.error(data["error"])
         else:
-            gv = GraphVisualizer(height="700px")
-            html_body = gv.create_interactive_network(
-                data,
-                show_buttons=show_buttons,
-                scale_by_centrality=scale_cent,
-                physics=physics,
-                min_degree=min_deg,
-                show_edge_labels=show_edge_labels,
-            )
-            st_html(html_body, height=740)
+            # Debug information
+            st.write(f"**Geladene Daten:** {len(data.get('nodes', []))} Knoten, {len(data.get('relationships', []))} Beziehungen")
+            
+            if not data.get("nodes"):
+                st.warning("Keine Knoten gefunden. Bitte importieren Sie zuerst Daten über den Import-Tab.")
+            else:
+                # Show sample data
+                with st.expander("Beispieldaten anzeigen", expanded=False):
+                    st.write("**Erste 3 Knoten:**")
+                    for i, node in enumerate(data.get("nodes", [])[:3]):
+                        st.write(f"{i+1}. ID: {node['id']}, Labels: {node['labels']}, Properties: {list(node['properties'].keys())}")
+                    
+                    st.write("**Erste 3 Beziehungen:**")
+                    for i, rel in enumerate(data.get("relationships", [])[:3]):
+                        st.write(f"{i+1}. {rel['source']} -[{rel['type']}]-> {rel['target']}")
+                
+                gv = GraphVisualizer(height="700px")
+                
+                if viz_type == "Interaktiv (pyvis)":
+                    html_body = gv.create_interactive_network(
+                        data,
+                        show_buttons=show_buttons,
+                        scale_by_centrality=scale_cent,
+                        physics=physics,
+                        min_degree=min_deg,
+                        show_edge_labels=show_edge_labels,
+                    )
+                    
+                    if html_body:
+                        st_html(html_body, height=740)
+                    else:
+                        st.error("Fehler beim Generieren der interaktiven Visualisierung")
+                else:
+                    # Static visualization
+                    static_html = gv.create_static_network(data, "Neo4j Graph")
+                    st_html(static_html, height=600)
 
     with tab_explore:
         st.subheader("Explore: Interaktive Nachbarschaft")
