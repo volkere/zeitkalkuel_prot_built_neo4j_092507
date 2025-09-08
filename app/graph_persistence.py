@@ -4,6 +4,8 @@ from neo4j import GraphDatabase, Driver
 import json
 import hashlib
 from datetime import datetime
+from rdflib import Graph, Namespace, URIRef, BNode, Literal
+from rdflib.namespace import RDF, RDFS, XSD, FOAF, DCTERMS
 
 
 class Neo4jPersistence:
@@ -394,6 +396,129 @@ class Neo4jPersistence:
                 json.dump(graph_data, f, ensure_ascii=False, indent=2)
             return True
         except Exception as e:
+            return False
+
+    # ------------------------- Linked Open Data (RDF) -------------------------
+    def export_rdf(self, output_file: str, fmt: str = "turtle", base_uri: str = "https://example.org/zeitkalkuel/") -> bool:
+        """Export the Neo4j graph as RDF (JSON-LD/Turtle) using simple ontology mappings.
+
+        - Image → schema:ImageObject
+        - Person → foaf:Person
+        - Location → schema:Place with geo:lat/geo:long
+        - Capture → schema:Event
+        - Camera/Tech/ImageAnalysis as blank nodes with schema:* properties
+        - Relationships mapped to schema:* or custom namespace
+        """
+        try:
+            data = self.get_graph_data(limit=100000)
+            if "error" in data:
+                return False
+
+            g = Graph()
+            SCHEMA = Namespace("http://schema.org/")
+            GEO = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
+            ZK = Namespace(base_uri)
+            g.bind("schema", SCHEMA)
+            g.bind("geo", GEO)
+            g.bind("foaf", FOAF)
+            g.bind("dcterms", DCTERMS)
+            g.bind("zk", ZK)
+
+            # Build index of node id → uri and store label for typing
+            id_to_uri: Dict[int, URIRef] = {}
+            id_to_labels: Dict[int, List[str]] = {}
+            for n in data.get("nodes", []):
+                nid = int(n["id"]) if isinstance(n["id"], int) else int(n["id"])
+                labels = n.get("labels", [])
+                id_to_labels[nid] = labels
+                # Prefer stable URI when possible
+                props = n.get("properties", {})
+                key = props.get("id") or props.get("name") or str(nid)
+                uri = URIRef(f"{base_uri}node/{key}")
+                id_to_uri[nid] = uri
+
+                # Type mapping
+                if "Image" in labels:
+                    g.add((uri, RDF.type, SCHEMA.ImageObject))
+                    if props.get("name"):
+                        g.add((uri, DCTERMS.title, Literal(props["name"])) )
+                if "Person" in labels:
+                    g.add((uri, RDF.type, FOAF.Person))
+                    if props.get("name"):
+                        g.add((uri, FOAF.name, Literal(props["name"])) )
+                if "Location" in labels:
+                    g.add((uri, RDF.type, SCHEMA.Place))
+                    if props.get("lat") is not None:
+                        g.add((uri, GEO.lat, Literal(props["lat"], datatype=XSD.float)))
+                    if props.get("lon") is not None:
+                        g.add((uri, GEO.long, Literal(props["lon"], datatype=XSD.float)))
+                    if props.get("altitude") is not None:
+                        g.add((uri, SCHEMA.elevation, Literal(props["altitude"], datatype=XSD.float)))
+                if "Capture" in labels:
+                    g.add((uri, RDF.type, SCHEMA.Event))
+                    if props.get("datetime"):
+                        g.add((uri, SCHEMA.startDate, Literal(props["datetime"], datatype=XSD.dateTime)))
+                if "Address" in labels:
+                    g.add((uri, RDF.type, SCHEMA.PostalAddress))
+                    for p in ["full_address","country","state","city","postcode"]:
+                        if props.get(p):
+                            pred = {
+                                "full_address": SCHEMA.streetAddress,
+                                "country": SCHEMA.addressCountry,
+                                "state": SCHEMA.addressRegion,
+                                "city": SCHEMA.addressLocality,
+                                "postcode": SCHEMA.postalCode,
+                            }[p]
+                            g.add((uri, pred, Literal(props[p])))
+
+                # Generic property dump as zk:propName literals (safe default)
+                for k, v in props.items():
+                    try:
+                        if k in {"lat","lon","altitude"}:
+                            continue  # already mapped
+                        pred = ZK[k]
+                        g.add((uri, pred, Literal(v)))
+                    except Exception:
+                        pass
+
+            # Relationships mapping
+            for r in data.get("relationships", []):
+                sid = int(r["source"]) ; tid = int(r["target"]) ; rtype = r.get("type")
+                su = id_to_uri.get(sid); tu = id_to_uri.get(tid)
+                if not su or not tu:
+                    continue
+                # Map common types else zk:rtype
+                if rtype == "CONTAINS":
+                    pred = SCHEMA.image
+                elif rtype == "IDENTIFIED_AS":
+                    pred = SCHEMA.subjectOf
+                elif rtype == "AT_LOCATION":
+                    pred = SCHEMA.contentLocation
+                elif rtype == "TAKEN_AT":
+                    pred = SCHEMA.startTime
+                elif rtype == "HAS_CAMERA":
+                    pred = SCHEMA.instrument
+                elif rtype == "HAS_TECH":
+                    pred = ZK.hasTech
+                elif rtype == "HAS_ANALYSIS":
+                    pred = ZK.hasAnalysis
+                elif rtype == "RESOLVED_AS":
+                    pred = SCHEMA.address
+                elif rtype == "PERFORMS":
+                    pred = ZK.performs
+                else:
+                    pred = ZK[rtype]
+                g.add((su, pred, tu))
+
+            # Serialize
+            serialized = g.serialize(format="json-ld" if fmt in ("jsonld","json-ld") else fmt)
+            with open(output_file, "wb") as f:
+                if isinstance(serialized, str):
+                    f.write(serialized.encode("utf-8"))
+                else:
+                    f.write(serialized)
+            return True
+        except Exception:
             return False
 
 
