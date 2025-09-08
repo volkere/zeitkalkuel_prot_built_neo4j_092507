@@ -137,6 +137,29 @@ Kurzüberblick:
 Weitere Details: siehe `docs/NEO4J_INTEGRATION.md`.
 
 
+Erweiterte Graph-Visualisierung
+-------------------------------
+Die interaktive Netzwerkansicht (pyvis) auf der Seite "Neo4j Graph" bietet erweiterte Steuerungsmöglichkeiten.
+
+Features:
+- Steuerpanel (optional): Physics, Nodes, Edges
+- Physik ein-/ausschalten (Force-Layout)
+- Knotengröße nach Degree-Zentralität skalieren
+- Filter für minimalen Knotengrad (blendet schwach vernetzte Knoten aus)
+- Optional Kanten-Labels rendern
+- Farbgebung und Tooltips nach Labels (z. B. Person, Image, Location, Face)
+
+Bedienung (Tab "Visualisierung"):
+- Limit: maximale Anzahl geladener Knoten/Kanten
+- Steuerung anzeigen: blendet das pyvis-Control-Panel ein
+- Physik aktiv: Layout-Dynamik ein/aus
+- Größe nach Zentralität: skaliert Knoten nach Degree-Centrality
+- Minimaler Knotengrad: filtert Knoten unterhalb des Grenzwerts
+- Kanten-Labels anzeigen: zeigt Beschriftungen an Kanten
+
+Hinweis: Standardhöhe ist 700px, für große Graphen empfiehlt sich die aktive Physik und ggf. Erhöhung des Limits.
+
+
 Linked Open Data (LOD) Export
 -----------------------------
 Die Seite "Linked Open Data Export" exportiert die Neo4j-Daten als RDF in den Formaten Turtle oder JSON‑LD.
