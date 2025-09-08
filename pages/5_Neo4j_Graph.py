@@ -52,8 +52,8 @@ st.info("Status: Verbunden" if connected else "Status: Nicht verbunden")
 if connected:
     neo: Neo4jPersistence = st.session_state["neo4j_conn"]
 
-    tab_info, tab_import, tab_query, tab_vis, tab_admin = st.tabs([
-        "Datenbank-Info", "Import", "Abfragen", "Visualisierung", "Verwaltung"
+    tab_info, tab_import, tab_query, tab_vis, tab_explore, tab_admin = st.tabs([
+        "Datenbank-Info", "Import", "Abfragen", "Visualisierung", "Explore", "Verwaltung"
     ])
 
     with tab_info:
@@ -120,6 +120,73 @@ if connected:
                 show_edge_labels=show_edge_labels,
             )
             st_html(html_body, height=740)
+
+    with tab_explore:
+        st.subheader("Explore: Interaktive Nachbarschaft")
+        # State
+        if "explore_nodes" not in st.session_state:
+            st.session_state["explore_nodes"] = set()
+        if "explore_graph" not in st.session_state:
+            st.session_state["explore_graph"] = {"nodes": [], "relationships": []}
+
+        col_a, col_b = st.columns([2, 1])
+        with col_a:
+            term = st.text_input("Suche (Name/Label/Eigenschaft)")
+            if st.button("Suchen") and term.strip():
+                results = neo.search_nodes(term.strip(), limit=50)
+                if results and not isinstance(results[0], dict) and results[0].get("error"):
+                    st.error(results[0]["error"])  # unlikely path
+                else:
+                    st.write("Treffer:")
+                    for r in results:
+                        st.write(f"ID {r['id']} | Labels: {', '.join(r['labels'])} | Props: {list(r['properties'].keys())[:5]}")
+        with col_b:
+            node_id_str = st.text_input("Node-ID fokussieren")
+            depth = st.slider("Tiefe", 1, 3, 1)
+            if st.button("Fokussieren/Erweitern"):
+                try:
+                    nid = int(node_id_str)
+                    sub = neo.get_neighborhood(nid, depth=depth, limit=2000)
+                    if "error" in sub:
+                        st.error(sub["error"])
+                    else:
+                        # Merge into explore graph
+                        g = st.session_state["explore_graph"]
+                        existing_ids = {n["id"] for n in g["nodes"]}
+                        for n in sub.get("nodes", []):
+                            if n["id"] not in existing_ids:
+                                g["nodes"].append(n)
+                        g["relationships"].extend(sub.get("relationships", []))
+                        st.session_state["explore_nodes"].add(nid)
+                        st.success(f"Subgraph (Tiefe {depth}) hinzugefügt.")
+                except ValueError:
+                    st.warning("Bitte eine gültige numerische Node-ID angeben.")
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button("Zurücksetzen"):
+                st.session_state["explore_graph"] = {"nodes": [], "relationships": []}
+                st.session_state["explore_nodes"] = set()
+        with c2:
+            physics_e = st.checkbox("Physik aktiv (Explore)", True)
+        with c3:
+            show_labels_e = st.checkbox("Kanten-Labels (Explore)", False)
+
+        eg = st.session_state["explore_graph"]
+        if eg["nodes"]:
+            gv = GraphVisualizer(height="750px")
+            html_body = gv.create_interactive_network(
+                eg,
+                show_buttons=True,
+                physics=physics_e,
+                scale_by_centrality=True,
+                min_degree=0,
+                show_edge_labels=show_labels_e,
+                highlight_nodes=st.session_state.get("explore_nodes")
+            )
+            st_html(html_body, height=780)
+        else:
+            st.info("Suche einen Knoten und erweitere seine Nachbarschaft, um das Explore-Netzwerk aufzubauen.")
 
     with tab_admin:
         st.subheader("Verwaltung")

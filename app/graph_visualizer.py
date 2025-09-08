@@ -22,7 +22,8 @@ class GraphVisualizer:
                                  scale_by_centrality: bool = True,
                                  physics: bool = True,
                                  min_degree: int = 0,
-                                 show_edge_labels: bool = True) -> str:
+                                 show_edge_labels: bool = True,
+                                 highlight_nodes: set | None = None) -> str:
         """Create an interactive network visualization using pyvis.
 
         - show_buttons: adds a control panel (physics/nodes/edges).
@@ -113,12 +114,16 @@ class GraphVisualizer:
                 title_text = f"{labels[0] if labels else 'Node'}: {label}"
             
             # Add node
+            node_size = 20
+            if highlight_nodes and node_id in highlight_nodes:
+                node_size = 35
+
             net.add_node(
                 node_id,
                 label=label,
                 title=title_text,
                 color=color,
-                size=20
+                size=node_size
             )
         
         # Add edges

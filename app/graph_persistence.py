@@ -317,6 +317,61 @@ class Neo4jPersistence:
         except Exception as e:
             return {"error": str(e)}
 
+    def search_nodes(self, term: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Search nodes by common text properties (name, id, label fields)."""
+        try:
+            with self._driver.session() as session:
+                query = """
+                MATCH (n)
+                WHERE any(k IN keys(n) WHERE toString(n[k]) CONTAINS $term)
+                   OR any(l IN labels(n) WHERE toString(l) CONTAINS $term)
+                RETURN id(n) as id, labels(n) as labels, properties(n) as props
+                LIMIT $limit
+                """
+                res = session.run(query, {"term": term, "limit": limit})
+                return [{"id": r["id"], "labels": r["labels"], "properties": dict(r["props"])} for r in res]
+        except Exception as e:
+            return [{"error": str(e)}]
+
+    def get_neighborhood(self, node_id: int, depth: int = 1, limit: int = 200) -> Dict[str, Any]:
+        """Get a subgraph around a node up to given depth."""
+        try:
+            with self._driver.session() as session:
+                query = """
+                MATCH (n)
+                WHERE id(n) = $id
+                CALL apoc.path.subgraphAll(n, {maxLevel:$depth}) YIELD nodes, relationships
+                WITH nodes, relationships
+                RETURN [x IN nodes | {id:id(x), labels:labels(x), properties:properties(x)}] as nodes,
+                       [r IN relationships | {source:id(startNode(r)), target:id(endNode(r)), type:type(r), properties:properties(r)}] as rels
+                """
+                # Fallback without APOC
+                query_no_apoc = """
+                MATCH (n)
+                WHERE id(n) = $id
+                MATCH p=(n)-[*1..$depth]-(m)
+                WITH collect(nodes(p)) as nds, collect(relationships(p)) as rels
+                WITH apoc.coll.toSet(apoc.coll.flatten(nds)) as nodes,
+                     apoc.coll.toSet(apoc.coll.flatten(rels)) as relationships
+                RETURN [x IN nodes | {id:id(x), labels:labels(x), properties:properties(x)}] as nodes,
+                       [r IN relationships | {source:id(startNode(r)), target:id(endNode(r)), type:type(r), properties:properties(r)}] as rels
+                """
+                try:
+                    rec = session.run(query, {"id": node_id, "depth": depth}).single()
+                except Exception:
+                    rec = session.run(query_no_apoc, {"id": node_id, "depth": depth}).single()
+                if not rec:
+                    return {"nodes": [], "relationships": []}
+                nodes = rec["nodes"] or []
+                rels = rec["rels"] or []
+                # Apply simple limit
+                return {
+                    "nodes": nodes[:limit],
+                    "relationships": rels[:limit]
+                }
+        except Exception as e:
+            return {"error": str(e)}
+
     def get_person_network(self, person_name: str) -> Dict[str, Any]:
         """Get the network of a specific person."""
         try:
