@@ -62,6 +62,8 @@ UI-Seiten:
 - Annotate: Erweiterte Foto-Analyse mit Metadaten
 - Analyze: Statistiken, Charts und Gruppierungsanalyse
  - Image Search: Semantische Bildsuche mit CLIP-Embeddings (Bild- oder Text-Query)
+ - Neo4j Graph: Graphdatenbank-Integration und -Visualisierung (Import/Abfragen/Export)
+ - Linked Open Data Export: RDF-Export (Turtle/JSON-LD)
 
 Quickstart (CLI)
 ```bash
@@ -78,7 +80,7 @@ python -m app.main annotate --input ./photos --out output.json --recursive --rev
 Repo layout
 ```
 app/                  # Python package (engine, CLI)
-pages/                # Streamlit pages (Enroll, Annotate, Analyze, Image Search)
+pages/                # Streamlit pages (Enroll, Annotate, Analyze, Image Search, Neo4j, LOD Export)
 streamlit_app.py      # Streamlit entry
 requirements.txt      # runtime deps
 pyproject.toml        # package metadata + console script
@@ -119,5 +121,41 @@ Optimierungen für bessere Metadaten-Erkennung
 - JSON-Export: Vollständige Metadaten
 - Analyse-Export: Gruppierungen und Statistiken
 - Format-Kompatibilität: Standardisierte Ausgabe
+
+
+Neo4j-Integration (optional)
+----------------------------
+Die Seite "Neo4j Graph" erlaubt es, Annotationen in eine Neo4j-Instanz zu importieren, Abfragen auszuführen und Graphen zu visualisieren.
+
+Kurzüberblick:
+- Verbindung: Bolt-URI, Benutzer, Passwort in der Sidebar angeben und verbinden
+- Import: JSON-Ergebnisse (aus "Annotate") in die DB importieren
+- Abfragen: Eigene Cypher-Queries ausführen
+- Visualisierung: Interaktives Netzwerk (pyvis) oder statisch (networkx)
+- Verwaltung: Export nach JSON, Datenbank leeren
+
+Weitere Details: siehe `docs/NEO4J_INTEGRATION.md`.
+
+
+Linked Open Data (LOD) Export
+-----------------------------
+Die Seite "Linked Open Data Export" exportiert die Neo4j-Daten als RDF in den Formaten Turtle oder JSON‑LD.
+
+Verwendung:
+- Seite öffnen: "Linked Open Data Export"
+- Verbindung zur Neo4j-DB angeben (Bolt URI, User, Passwort)
+- Base-URI konfigurieren (Standard: `https://example.org/zeitkalkuel/`)
+- Format wählen (`turtle` oder `json-ld`) und Export starten
+- Ergebnisdatei herunterladen
+
+Ontologie-Mapping (vereinfachte Zuordnung):
+- Image → `schema:ImageObject`
+- Person → `foaf:Person`
+- Location → `schema:Place` mit `geo:lat`/`geo:long`
+- Capture → `schema:Event` (Zeitstempel)
+- Address → `schema:PostalAddress`
+- Kanten werden – wenn verfügbar – auf `schema:*` gemappt, sonst auf `zk:*` (Projekt-Namespace)
+
+Abhängigkeit: `rdflib` (bereits in `requirements.txt`).
 
 
