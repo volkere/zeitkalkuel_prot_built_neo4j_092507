@@ -147,8 +147,6 @@ if connected:
                         gv = GraphVisualizer(height="650px")
                         html_body = gv.create_interactive_network(sub, "Personen-Subgraph", show_edge_labels=True)
                         st_html(html_body, height=680)
-                    else:
-                        st.warning("Keine Daten für Netzwerk verfügbar")
                 else:
                     st.info("Karten-Ansicht nicht verfügbar für Personen")
             else:
