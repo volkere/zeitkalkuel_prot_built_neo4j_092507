@@ -9,6 +9,7 @@ import io
 import base64
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import re
 
 
 class GraphVisualizer:
@@ -440,3 +441,182 @@ class GraphVisualizer:
             
         except Exception as e:
             return f'<div style="color: red; padding: 20px;">Fehler bei der statischen Visualisierung: {str(e)}</div>'
+    
+    def parse_cypher_query(self, query: str) -> Dict[str, Any]:
+        """Parse a Cypher query and extract nodes, relationships, and patterns."""
+        try:
+            # Clean up query
+            query = re.sub(r'--.*$', '', query, flags=re.MULTILINE)  # Remove comments
+            query = re.sub(r'\s+', ' ', query.strip())  # Normalize whitespace
+            
+            # Extract MATCH patterns
+            match_patterns = re.findall(r'MATCH\s+([^WHERE|RETURN|WITH]+)', query, re.IGNORECASE)
+            
+            nodes = []
+            relationships = []
+            node_counter = 0
+            rel_counter = 0
+            
+            for pattern in match_patterns:
+                # Parse node patterns like (n:Label) or (n:Label {prop: value})
+                node_matches = re.findall(r'\(([^)]+)\)', pattern)
+                
+                for node_match in node_matches:
+                    # Extract variable name and labels
+                    var_match = re.match(r'(\w+)(?::([^\{]+))?(?:\s*\{([^}]+)\})?', node_match.strip())
+                    if var_match:
+                        var_name = var_match.group(1)
+                        labels = var_match.group(2).split(':') if var_match.group(2) else ['Node']
+                        props = var_match.group(3) if var_match.group(3) else ''
+                        
+                        nodes.append({
+                            "id": var_name,
+                            "labels": [label.strip() for label in labels if label.strip()],
+                            "properties": {"variable": var_name, "props": props}
+                        })
+                
+                # Parse relationship patterns like -[r:TYPE]-> or -[r:TYPE {prop: value}]->
+                rel_matches = re.findall(r'-\[([^\]]+)\]->?', pattern)
+                
+                for rel_match in rel_matches:
+                    # Extract relationship variable and type
+                    rel_var_match = re.match(r'(\w+)(?::([^\{]+))?(?:\s*\{([^}]+)\})?', rel_match.strip())
+                    if rel_var_match:
+                        rel_var = rel_var_match.group(1)
+                        rel_type = rel_var_match.group(2) if rel_var_match.group(2) else 'RELATED_TO'
+                        rel_props = rel_var_match.group(3) if rel_var_match.group(3) else ''
+                        
+                        relationships.append({
+                            "id": f"rel_{rel_counter}",
+                            "type": rel_type.strip(),
+                            "properties": {"variable": rel_var, "props": rel_props}
+                        })
+                        rel_counter += 1
+            
+            # Extract RETURN clause
+            return_clause = re.search(r'RETURN\s+([^ORDER|LIMIT]+)', query, re.IGNORECASE)
+            return_vars = []
+            if return_clause:
+                return_vars = [var.strip() for var in return_clause.group(1).split(',')]
+            
+            # Extract WHERE conditions
+            where_clause = re.search(r'WHERE\s+([^RETURN|WITH]+)', query, re.IGNORECASE)
+            where_conditions = []
+            if where_clause:
+                where_conditions = [where_clause.group(1).strip()]
+            
+            return {
+                "nodes": nodes,
+                "relationships": relationships,
+                "return_variables": return_vars,
+                "where_conditions": where_conditions,
+                "original_query": query
+            }
+            
+        except Exception as e:
+            return {"error": f"Fehler beim Parsen der Cypher-Query: {str(e)}"}
+    
+    def visualize_cypher_query(self, query: str) -> str:
+        """Create a visual representation of a Cypher query structure."""
+        try:
+            parsed = self.parse_cypher_query(query)
+            if "error" in parsed:
+                return f'<div style="color: red; padding: 20px;">{parsed["error"]}</div>'
+            
+            # Create NetworkX graph for query visualization
+            G = nx.DiGraph()
+            
+            # Add nodes
+            for node in parsed["nodes"]:
+                G.add_node(node["id"], labels=node["labels"], properties=node["properties"])
+            
+            # Add relationships (simplified - just connect nodes in order)
+            nodes = parsed["nodes"]
+            for i in range(len(nodes) - 1):
+                G.add_edge(nodes[i]["id"], nodes[i+1]["id"], type="RELATED")
+            
+            if len(G.nodes()) == 0:
+                return '<div style="color: orange; padding: 20px;">Keine Knoten in der Query gefunden.</div>'
+            
+            # Create figure
+            plt.figure(figsize=(14, 10))
+            
+            # Layout
+            pos = nx.spring_layout(G, k=3, iterations=100)
+            
+            # Color mapping for query elements
+            node_colors = {
+                "Person": "#ff6b6b",
+                "Image": "#4ecdc4", 
+                "Location": "#45b7d1",
+                "Face": "#f9ca24",
+                "Camera": "#6c5ce7",
+                "Tech": "#a29bfe",
+                "Capture": "#fd79a8",
+                "ImageAnalysis": "#fdcb6e",
+                "Address": "#e17055",
+                "Dance": "#00b894",
+                "Node": "#95a5a6"
+            }
+            
+            # Draw nodes
+            node_colors_list = []
+            for node in G.nodes():
+                labels = G.nodes[node].get("labels", ["Node"])
+                color = "#95a5a6"  # default
+                for label in labels:
+                    if label in node_colors:
+                        color = node_colors[label]
+                        break
+                node_colors_list.append(color)
+            
+            nx.draw_networkx_nodes(G, pos, node_color=node_colors_list, node_size=1000, alpha=0.8)
+            nx.draw_networkx_edges(G, pos, edge_color='#2c3e50', arrows=True, arrowsize=30, width=3, alpha=0.7)
+            
+            # Add labels
+            labels = {}
+            for node in G.nodes():
+                node_labels = G.nodes[node].get("labels", ["Node"])
+                props = G.nodes[node].get("properties", {})
+                var_name = props.get("variable", node)
+                label_text = f"{var_name}\n{':'.join(node_labels)}"
+                if props.get("props"):
+                    label_text += f"\n{{{props['props'][:20]}...}}"
+                labels[node] = label_text
+            
+            nx.draw_networkx_labels(G, pos, labels, font_size=10, font_weight='bold')
+            
+            # Add title with query info
+            title = f"Cypher Query Structure\n{len(parsed['nodes'])} Knoten, {len(parsed['relationships'])} Beziehungen"
+            if parsed["return_variables"]:
+                title += f"\nRETURN: {', '.join(parsed['return_variables'])}"
+            if parsed["where_conditions"]:
+                title += f"\nWHERE: {parsed['where_conditions'][0][:50]}..."
+            
+            plt.title(title, fontsize=12, pad=20)
+            plt.axis('off')
+            
+            # Create legend
+            legend_elements = []
+            for label, color in node_colors.items():
+                if any(label in node.get("labels", []) for node in parsed["nodes"]):
+                    legend_elements.append(mpatches.Patch(color=color, label=label))
+            if legend_elements:
+                plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
+            
+            # Add query text box
+            query_text = parsed["original_query"][:200] + "..." if len(parsed["original_query"]) > 200 else parsed["original_query"]
+            plt.figtext(0.02, 0.02, f"Query: {query_text}", fontsize=8, 
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.7))
+            
+            # Convert to base64 string
+            img_buffer = io.BytesIO()
+            plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
+            img_buffer.seek(0)
+            img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+            plt.close()
+            
+            return f'<img src="data:image/png;base64,{img_base64}" style="width: 100%; max-width: 1200px;">'
+            
+        except Exception as e:
+            return f'<div style="color: red; padding: 20px;">Fehler bei der Query-Visualisierung: {str(e)}</div>'

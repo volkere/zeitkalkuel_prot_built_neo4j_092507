@@ -89,13 +89,58 @@ if connected:
 
     with tab_query:
         st.subheader("Cypher ausführen")
-        q = st.text_area("Cypher", value="MATCH (n) RETURN labels(n) AS labels, count(n) AS cnt ORDER BY cnt DESC")
-        if st.button("Query ausführen"):
-            res = neo.execute_cypher(q)
-            try:
-                st.dataframe(pd.DataFrame(res))
-            except Exception:
-                st.json(res)
+        
+        # Example queries
+        example_queries = {
+            "Alle Knoten zählen": "MATCH (n) RETURN labels(n) AS labels, count(n) AS cnt ORDER BY cnt DESC",
+            "Personen mit Bildern": "MATCH (p:Person)<-[:IDENTIFIED_AS]-(f:Face)<-[:CONTAINS]-(i:Image) RETURN p.name, count(i) as image_count",
+            "Bilder an Standorten": "MATCH (i:Image)-[:AT_LOCATION]->(l:Location) RETURN l.lat, l.lon, count(i) as photo_count",
+            "Gesichter mit Emotionen": "MATCH (f:Face) WHERE f.emotion IS NOT NULL RETURN f.emotion, count(f) as count",
+            "Komplexe Abfrage": "MATCH (p:Person)<-[:IDENTIFIED_AS]-(f:Face)<-[:CONTAINS]-(i:Image)-[:AT_LOCATION]->(l:Location) WHERE f.emotion = 'happy' RETURN p.name, l.lat, l.lon, count(i) as happy_photos"
+        }
+        
+        selected_example = st.selectbox("Beispiel-Query wählen:", ["Eigene Query"] + list(example_queries.keys()))
+        
+        if selected_example == "Eigene Query":
+            q = st.text_area("Cypher", value="MATCH (n) RETURN labels(n) AS labels, count(n) AS cnt ORDER BY cnt DESC")
+        else:
+            q = st.text_area("Cypher", value=example_queries[selected_example])
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("Query ausführen"):
+                res = neo.execute_cypher(q)
+                try:
+                    st.dataframe(pd.DataFrame(res))
+                except Exception:
+                    st.json(res)
+        
+        with col2:
+            if st.button("Query visualisieren"):
+                gv = GraphVisualizer()
+                query_viz = gv.visualize_cypher_query(q)
+                st_html(query_viz, height=600)
+        
+        # Show parsed query structure
+        with st.expander("Query-Struktur analysieren", expanded=False):
+            gv = GraphVisualizer()
+            parsed = gv.parse_cypher_query(q)
+            if "error" in parsed:
+                st.error(parsed["error"])
+            else:
+                st.write("**Gefundene Knoten:**")
+                for node in parsed["nodes"]:
+                    st.write(f"- {node['id']}: {', '.join(node['labels'])}")
+                
+                st.write("**Gefundene Beziehungen:**")
+                for rel in parsed["relationships"]:
+                    st.write(f"- {rel['type']}")
+                
+                if parsed["return_variables"]:
+                    st.write(f"**RETURN:** {', '.join(parsed['return_variables'])}")
+                
+                if parsed["where_conditions"]:
+                    st.write(f"**WHERE:** {parsed['where_conditions'][0]}")
 
     with tab_vis:
         st.subheader("Graph-Visualisierung")
