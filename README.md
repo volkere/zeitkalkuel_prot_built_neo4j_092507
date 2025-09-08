@@ -62,7 +62,7 @@ UI-Seiten:
 - Annotate: Erweiterte Foto-Analyse mit Metadaten
 - Analyze: Statistiken, Charts und Gruppierungsanalyse
  - Image Search: Semantische Bildsuche mit CLIP-Embeddings (Bild- oder Text-Query)
- - Neo4j Graph: Graphdatenbank-Integration und -Visualisierung (Import/Abfragen/Export)
+ - Neo4j Graph: Graphdatenbank-Integration mit visueller Daten-Exploration (Import/Abfragen/Visualisierung/Export)
  - Linked Open Data Export: RDF-Export (Turtle/JSON-LD)
 
 Quickstart (CLI)
@@ -129,13 +129,54 @@ Die Seite "Neo4j Graph" erlaubt es, Annotationen in eine Neo4j-Instanz zu import
 
 Kurzüberblick:
 - Verbindung: Bolt-URI, Benutzer, Passwort in der Sidebar angeben und verbinden
+- Daten-View: Visuelle Exploration aller Entitäten (Karten, Diagramme, interaktive Graphen)
 - Import: JSON-Ergebnisse (aus "Annotate") in die DB importieren
-- Abfragen: Eigene Cypher-Queries ausführen
+- Abfragen: Eigene Cypher-Queries ausführen und visuell darstellen
 - Visualisierung: Interaktives Netzwerk (pyvis) mit erweiterten Steuerungsoptionen
 - Explore: Interaktive Nachbarschafts-Erweiterung und Knoten-Suche
 - Verwaltung: Export nach JSON, Datenbank leeren
 
 Weitere Details: siehe `docs/NEO4J_INTEGRATION.md`.
+
+
+Visuelle Daten-View
+-------------------
+Der neue "Daten-View"-Tab bietet umfassende visuelle Exploration aller Entitäten in der Neo4j-Datenbank.
+
+**Ansichtsoptionen:**
+- **Tabellen**: Klassische Tabellen-Ansicht mit sortierbaren Spalten
+- **Karten**: Interaktive Karten mit OpenStreetMap für GPS-basierte Daten
+- **Diagramme**: Plotly-Charts und statistische Visualisierungen
+- **Interaktive Graphen**: Netzwerk-Visualisierungen mit pyvis
+
+**Verfügbare Datentypen:**
+- **Alle Personen**: Namen und Identifikation
+- **Alle Bilder**: Dateinamen, Auflösung, GPS-Koordinaten, Kamera-Info
+- **Alle Standorte**: GPS-Koordinaten, Höhe, vollständige Adressen
+- **Alle Gesichter**: Emotionen, Qualitätsscores, zugehörige Personen
+- **Alle Kameras**: Hersteller, Modelle, Objektive
+- **Alle Aufnahmen**: Zeitstempel, Wochentage, Tageszeiten
+- **Alle Adressen**: Städte, Länder, Bundesländer, PLZ
+- **Alle Tänze**: Tanzarten und Ausführungsanzahlen
+
+**Visuelle Features:**
+- **Karten**: GPS-Punkte mit Hover-Informationen, farbkodiert nach Kategorien
+- **Diagramme**: Pie-Charts, Balkendiagramme, Histogramme, Heatmaps
+- **Interaktive Graphen**: Farbkodierte Knoten, Zoom, Pan, Tooltips
+- **Statistiken**: Zusammenfassung mit Gesamtknoten, Beziehungen, Knotentypen
+
+**Bedienung:**
+1. Wähle Ansichtstyp (Tabellen/Karten/Diagramme/Interaktive Graphen)
+2. Wähle Datentyp aus dem Dropdown
+3. Stelle Anzahl der anzuzeigenden Einträge ein (10-1000)
+4. Erkunde deine Daten visuell
+
+**Beispiel-Visualisierungen:**
+- Standorte auf interaktiven Karten mit Adress-Informationen
+- Emotionsverteilung als Pie-Chart mit Qualitäts-Histogramm
+- Kamera-Hersteller Verteilung mit Objektiv-Statistiken
+- Aufnahmen nach Stunde/Wochentag/Tageszeit
+- Tanz-Ausführungen als Balkendiagramm
 
 
 Erweiterte Graph-Visualisierung
@@ -179,6 +220,36 @@ Bedienung (Tab "Explore"):
 - Zurücksetzen: Löscht das gesamte Explore-Netzwerk
 
 Anwendungsfall: Starte mit einer Suche nach interessanten Knoten (z. B. Personennamen), fokussiere einen Treffer und erweitere schrittweise seine Nachbarschaft, um Zusammenhänge zu entdecken.
+
+
+Cypher-Query-Visualisierung
+----------------------------
+Der "Abfragen"-Tab bietet jetzt auch visuelle Darstellung von Cypher-Queries.
+
+**Features:**
+- **Beispiel-Queries**: Vorgefertigte Queries für häufige Anwendungsfälle
+- **Query-Visualisierung**: Grafische Darstellung der Query-Struktur als Netzwerk
+- **Query-Parsing**: Automatische Analyse von MATCH, RETURN, WHERE-Klauseln
+- **Struktur-Analyse**: Detaillierte Aufschlüsselung der gefundenen Knoten und Beziehungen
+
+**Verfügbare Beispiel-Queries:**
+- Alle Knoten zählen
+- Personen mit Bildern
+- Bilder an Standorten
+- Gesichter mit Emotionen
+- Komplexe Abfragen mit mehreren Beziehungen
+
+**Bedienung:**
+1. Wähle eine Beispiel-Query oder schreibe deine eigene
+2. Klicke "Query ausführen" für Ergebnisse
+3. Klicke "Query visualisieren" für grafische Darstellung
+4. Erweitere "Query-Struktur analysieren" für Details
+
+**Visualisierung:**
+- Knoten mit Variablennamen und Labels
+- Farbkodierung nach Entitätstyp
+- Anzeige von RETURN- und WHERE-Klauseln
+- Interaktive Navigation und Zoom
 
 
 Linked Open Data (LOD) Export
