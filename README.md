@@ -189,6 +189,14 @@ Die RDF-Serialisierung nutzt folgende Vokabulare:
 - `IPTC` (Platzhalter für Foto-Metadaten, Best‑Effort)
 - `PROV-O` (`prov:generatedAtTime` für Aufnahmereignisse)
 
+Projektinterne Ontologie
+------------------------
+Datei: `docs/ontology/zeitkalkuel.ttl` (Namespace `zk:`)
+- Zusätzliche Klassen: `zk:Tech`, `zk:ImageAnalysis`, `zk:Dance`
+- Objekt‑Properties: `zk:hasTech`, `zk:hasAnalysis`, `zk:performs`
+- Daten‑Properties: `zk:overallQuality`, `zk:sharpness`, `zk:brightness`, `zk:contrast`, `zk:noiseLevel`, `zk:aspectRatio`, `zk:colorTemperature`, `zk:similarity`
+Diese ergänzen schema.org/EXIF/FOAF und werden im RDF‑Export als Fallback bzw. für Analysewerte genutzt.
+
 SHACL‑Validierung
 -----------------
 Shapes-Datei: `docs/SHACL/zeitkalkuel_shapes.ttl` (Image mit Titel, Person mit Name, Place mit lat/long).

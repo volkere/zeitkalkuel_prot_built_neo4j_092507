@@ -1,0 +1,88 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix schema: <http://schema.org/> .
+@prefix exif: <http://www.w3.org/2003/12/exif/ns#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix zk:   <https://example.org/zeitkalkuel/> .
+
+zk: a rdfs:Ontology ;
+  dcterms:title "Zeitkalkül Project Ontology"@en ;
+  dcterms:description "Lightweight terms to complement schema.org/EXIF/FOAF for Zeitkalkül exports."@en ;
+  dcterms:creator "Zeitkalkül" ;
+  dcterms:license <https://opensource.org/licenses/MIT> .
+
+# Classes (extensions)
+zk:Tech a rdfs:Class ;
+  rdfs:label "Technical Settings"@en ;
+  rdfs:comment "Container for camera technical properties associated with an image."@en .
+
+zk:ImageAnalysis a rdfs:Class ;
+  rdfs:label "Image Analysis"@en ;
+  rdfs:comment "Computed analysis values for an image (quality, composition)."@en ;
+  rdfs:subClassOf schema:Intangible .
+
+zk:Dance a rdfs:Class ;
+  rdfs:label "Dance"@en ;
+  rdfs:comment "Dance category inferred for a person in an image."@en .
+
+# Properties (object)
+zk:hasTech a rdf:Property ;
+  rdfs:label "has technical settings"@en ;
+  rdfs:domain schema:ImageObject ;
+  rdfs:range zk:Tech .
+
+zk:hasAnalysis a rdf:Property ;
+  rdfs:label "has image analysis"@en ;
+  rdfs:domain schema:ImageObject ;
+  rdfs:range zk:ImageAnalysis .
+
+zk:performs a rdf:Property ;
+  rdfs:label "performs"@en ;
+  rdfs:domain foaf:Person ;
+  rdfs:range zk:Dance .
+
+# Properties (data)
+zk:overallQuality a rdf:Property ;
+  rdfs:label "overall quality"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:float .
+
+zk:sharpness a rdf:Property ;
+  rdfs:label "sharpness"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:float .
+
+zk:brightness a rdf:Property ;
+  rdfs:label "brightness"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:float .
+
+zk:contrast a rdf:Property ;
+  rdfs:label "contrast"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:float .
+
+zk:noiseLevel a rdf:Property ;
+  rdfs:label "noise level"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:float .
+
+zk:aspectRatio a rdf:Property ;
+  rdfs:label "aspect ratio"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:float .
+
+zk:colorTemperature a rdf:Property ;
+  rdfs:label "color temperature"@en ;
+  rdfs:domain zk:ImageAnalysis ;
+  rdfs:range xsd:string .
+
+zk:similarity a rdf:Property ;
+  rdfs:label "similarity score"@en ;
+  rdfs:domain foaf:Person ;
+  rdfs:range xsd:float .
+
+

@@ -429,6 +429,12 @@ class Neo4jPersistence:
             g.bind("exif", EXIF)
             g.bind("iptc", IPTC)
             g.bind("prov", PROV)
+            # also publish ontology base if using example base_uri
+            try:
+                # ensure ontology base triple exists (non-fatal if fails)
+                g.add((ZK.term(""), RDF.type, RDFS.Resource))
+            except Exception:
+                pass
 
             # Build index of node id → uri and store label for typing
             id_to_uri: Dict[int, URIRef] = {}
