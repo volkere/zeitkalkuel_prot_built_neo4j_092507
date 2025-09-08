@@ -99,12 +99,12 @@ if connected:
 
     with tab_vis:
         st.subheader("Graph-Visualisierung")
-        limit = st.slider("Limit", 100, 10000, 1000, 100)
+        limit = st.slider("Limit", 100, 10000, 2000, 100)
         show_buttons = st.checkbox("Steuerung anzeigen (Physik/Nodes/Edges)", True)
         physics = st.checkbox("Physik aktiv", True)
         scale_cent = st.checkbox("Größe nach Zentralität", True)
         min_deg = st.slider("Minimaler Knotengrad (Filter)", 0, 5, 0)
-        show_edge_labels = st.checkbox("Kanten-Labels anzeigen", False)
+        show_edge_labels = st.checkbox("Kanten-Labels anzeigen", True)
 
         data = neo.get_graph_data(limit=limit)
         if "error" in data:

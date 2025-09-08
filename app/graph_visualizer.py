@@ -93,22 +93,51 @@ class GraphVisualizer:
                     color = node_colors[label]
                     break
             
-            # Create node label
+            # Create node label with more descriptive information
             if "Person" in labels:
-                label = properties.get("name", f"Person_{node_id}")
-                title_text = f"Person: {label}"
+                name = properties.get("name", "Unknown")
+                label = name
+                title_text = f"Person: {name}"
             elif "Image" in labels:
-                label = f"Image_{node_id}"
-                title_text = f"Image: {properties.get('name', 'Unknown')}"
+                name = properties.get("name", "Unknown")
+                label = name[:20] + "..." if len(name) > 20 else name
+                title_text = f"Image: {name}"
             elif "Location" in labels:
-                label = f"Location_{node_id}"
                 lat = properties.get("lat", "?")
                 lon = properties.get("lon", "?")
+                label = f"📍 {lat:.3f}, {lon:.3f}"
                 title_text = f"Location: {lat}, {lon}"
             elif "Face" in labels:
-                label = f"Face_{node_id}"
                 emotion = properties.get("emotion", "unknown")
-                title_text = f"Face: {emotion}"
+                quality = properties.get("quality_score", 0)
+                label = f"😊 {emotion}"
+                title_text = f"Face: {emotion} (Quality: {quality:.2f})"
+            elif "Camera" in labels:
+                make = properties.get("make", "Unknown")
+                model = properties.get("model", "Unknown")
+                label = f"📷 {make} {model}"
+                title_text = f"Camera: {make} {model}"
+            elif "Tech" in labels:
+                focal = properties.get("focal_length", "?")
+                fnum = properties.get("f_number", "?")
+                label = f"⚙️ {focal}mm f/{fnum}"
+                title_text = f"Tech: {focal}mm, f/{fnum}, ISO {properties.get('iso', '?')}"
+            elif "Capture" in labels:
+                dt = properties.get("datetime", "Unknown")
+                label = f"📅 {dt[:10] if dt != 'Unknown' else 'Unknown'}"
+                title_text = f"Capture: {dt}"
+            elif "ImageAnalysis" in labels:
+                quality = properties.get("overall_quality", 0)
+                label = f"📊 Quality: {quality:.2f}"
+                title_text = f"Analysis: Quality {quality:.2f}, Sharpness {properties.get('sharpness', 0):.2f}"
+            elif "Address" in labels:
+                addr = properties.get("full_address", "Unknown")
+                label = f"🏠 {addr[:15]}..." if len(addr) > 15 else f"🏠 {addr}"
+                title_text = f"Address: {addr}"
+            elif "Dance" in labels:
+                dance_type = properties.get("label", "Unknown")
+                label = f"💃 {dance_type}"
+                title_text = f"Dance: {dance_type}"
             else:
                 label = f"{labels[0]}_{node_id}" if labels else f"Node_{node_id}"
                 title_text = f"{labels[0] if labels else 'Node'}: {label}"
@@ -126,7 +155,7 @@ class GraphVisualizer:
                 size=node_size
             )
         
-        # Add edges
+        # Add edges with more descriptive labels
         edge_colors = {
             "CONTAINS": "#e74c3c",
             "IDENTIFIED_AS": "#2ecc71",
@@ -139,13 +168,26 @@ class GraphVisualizer:
             "PERFORMS": "#8e44ad"
         }
         
+        edge_labels = {
+            "CONTAINS": "contains",
+            "IDENTIFIED_AS": "is",
+            "AT_LOCATION": "at",
+            "TAKEN_AT": "taken",
+            "HAS_CAMERA": "with",
+            "HAS_TECH": "settings",
+            "HAS_ANALYSIS": "analyzed",
+            "RESOLVED_AS": "resolves to",
+            "PERFORMS": "performs"
+        }
+        
         for rel in graph_data.get("relationships", []):
             rel_type = rel["type"]
             color = edge_colors.get(rel_type, "#95a5a6")
             G.add_edge(rel["source"], rel["target"])
             
-            # Create edge title
+            # Create edge title and label
             properties = rel.get("properties", {})
+            edge_label = edge_labels.get(rel_type, rel_type.lower())
             title_text = f"{rel_type}"
             if properties:
                 title_text += f": {properties}"
@@ -153,10 +195,10 @@ class GraphVisualizer:
             net.add_edge(
                 rel["source"],
                 rel["target"],
-                label=(rel_type if show_edge_labels else ""),
+                label=(edge_label if show_edge_labels else ""),
                 title=title_text,
                 color=color,
-                width=2
+                width=3
             )
 
         # Degree filter and centrality scaling
